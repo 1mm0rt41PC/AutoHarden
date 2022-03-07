@@ -14,7 +14,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/1mm0rt41PC/HowTo/tree/master/Harden/Windows">
+  <a href="https://github.com/1mm0rt41PC/AutoHarden/">
     <img src="logo.png" alt="Logo" width="80" height="80" alt="Icon from https://www.flaticon.com/free-icon/pixels_423099?term=protect&page=1&position=23">
   </a>
 
@@ -72,7 +72,7 @@ A list of commonly used resources that I find helpful are listed in the acknowle
 1. Open a CMD.exe (or a powershell.exe) with administrator privileges
 2. Run the following command
 ```ps1
-powershell.exe -exec bypass -C "IEX (New-Object Net.WebClient).DownloadString('https://github.com/1mm0rt41PC/HowTo/raw/master/Harden/Windows/AutoHarden_RELEASE.ps1');"
+powershell.exe -exec bypass -C "IEX (New-Object Net.WebClient).DownloadString('https://github.com/1mm0rt41PC/AutoHarden/raw/master/AutoHarden_RELEASE.ps1');"
 ```
 3. Answers to a few parameterization questions
 
@@ -104,13 +104,13 @@ powershell -exec bypass -nop -File .\build.ps1
 
 
 
-[contributors-shield]: https://img.shields.io/github/contributors/1mm0rt41PC/HowTo.svg?style=flat-square
-[contributors-url]: https://github.com/1mm0rt41PC/HowTo/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/1mm0rt41PC/HowTo.svg?style=flat-square
-[forks-url]: https://github.com/1mm0rt41PC/HowTo/network/members
-[stars-shield]: https://img.shields.io/github/stars/1mm0rt41PC/HowTo.svg?style=flat-square
-[stars-url]: https://github.com/1mm0rt41PC/HowTo/stargazers
-[issues-shield]: https://img.shields.io/github/issues/1mm0rt41PC/HowTo.svg?style=flat-square
-[issues-url]: https://github.com/1mm0rt41PC/HowTo/issues
-[license-shield]: https://img.shields.io/github/license/1mm0rt41PC/HowTo.svg?style=flat-square
-[license-url]: https://github.com/1mm0rt41PC/HowTo/blob/master/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/1mm0rt41PC/AutoHarden.svg?style=flat-square
+[contributors-url]: https://github.com/1mm0rt41PC/AutoHarden/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/1mm0rt41PC/AutoHarden.svg?style=flat-square
+[forks-url]: https://github.com/1mm0rt41PC/AutoHarden/network/members
+[stars-shield]: https://img.shields.io/github/stars/1mm0rt41PC/AutoHarden.svg?style=flat-square
+[stars-url]: https://github.com/1mm0rt41PC/AutoHarden/stargazers
+[issues-shield]: https://img.shields.io/github/issues/1mm0rt41PC/AutoHarden.svg?style=flat-square
+[issues-url]: https://github.com/1mm0rt41PC/AutoHarden/issues
+[license-shield]: https://img.shields.io/github/license/1mm0rt41PC/AutoHarden.svg?style=flat-square
+[license-url]: https://github.com/1mm0rt41PC/AutoHarden/blob/master/LICENSE
