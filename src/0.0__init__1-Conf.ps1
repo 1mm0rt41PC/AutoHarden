@@ -1,0 +1,11 @@
+$AutoHarden_Folder='C:\Windows\AutoHarden'
+$AutoHarden_Logs="${AutoHarden_Folder}\logs"
+$AutoHarden_AsksFolder="${AutoHarden_Folder}\asks"
+$AutoHarden_Group='&{AutoHarden_Group}'
+$AutoHarden_Asks=($AutoHarden_Group -eq 'RELEASE')
+$AutoHarden_WebDomain="https://raw.githubusercontent.com/1mm0rt41PC/HowTo/master/Harden/Windows/AutoHarden_${AutoHarden_Group}.ps1"
+#$AutoHarden_SysmonUrl="https://raw.githubusercontent.com/olafhartong/sysmon-modular/master/sysmonconfig.xml"
+$AutoHarden_SysmonUrl="https://raw.githubusercontent.com/1mm0rt41PC/HowTo/master/Harden/Windows/sysmonconfig.xml"
+$AutoHarden_IP4Admins=@()
+$AutoHarden_IP4Users=@()
+$AutoHarden_IP4VPN=@()

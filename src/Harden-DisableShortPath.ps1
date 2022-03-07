@@ -1,0 +1,1 @@
+fsutil.exe 8dot3name set 1

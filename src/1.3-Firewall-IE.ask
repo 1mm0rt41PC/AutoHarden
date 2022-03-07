@@ -1,0 +1,3 @@
+Block Internet communication for 'Internet Explorer' ?
+'Internet Explorer' will still be able to access web server on local network.
+This filtering prevents viruses from downloading the payload.

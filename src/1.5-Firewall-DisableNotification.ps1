@@ -1,0 +1,1 @@
+Set-NetFirewallProfile -All -Enabled True -NotifyOnListen False

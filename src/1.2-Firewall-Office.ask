@@ -1,0 +1,3 @@
+Block Internet communication for Word and Excel ?
+Excel and Word will still be able to access files on local network shares.
+This filtering prevents viruses from downloading the payload.

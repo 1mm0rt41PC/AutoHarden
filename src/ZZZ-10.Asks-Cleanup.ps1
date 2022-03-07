@@ -1,0 +1,1 @@
+Remove-Item -Force -ErrorAction SilentlyContinue $AutoHarden_Folder\*.ask

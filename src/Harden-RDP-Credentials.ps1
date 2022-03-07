@@ -1,0 +1,1 @@
+Get-Item "HKCU:\Software\Microsoft\Terminal Server Client\Servers\*" -ErrorAction Ignore | Remove-Item -Force -Recurse

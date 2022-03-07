@@ -1,0 +1,1 @@
+Get-NetFirewallRule -Group '*AutoHarden*Office*' | Remove-NetFirewallRule

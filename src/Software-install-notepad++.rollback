@@ -1,0 +1,6 @@
+$npp_path=(Get-Item "C:\Program Files*\Notepad++\notepad++.exe")
+if( $npp_path -ne $null ){
+	$npp_path = $npp_path.FullName.Replace('.exe','.vbs')
+	rm $npp_path
+	reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe" /f
+}

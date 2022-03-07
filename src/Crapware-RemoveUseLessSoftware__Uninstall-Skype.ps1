@@ -1,0 +1,1 @@
+Get-AppxPackage *skypeapp* | Remove-AppxPackage

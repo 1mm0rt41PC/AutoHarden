@@ -1,0 +1,1 @@
+#https://www.it-connect.fr/active-directory-comment-reinitialiser-le-mot-de-passe-krbtgt/

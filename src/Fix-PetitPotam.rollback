@@ -1,0 +1,12 @@
+$entry = (netsh rpc filter show filter) | Select-String -Pattern '(filterKey|conditionValue): (\w+)' | Select-String -NotMatch FWP_TOKEN_ACCESS_INFORMATION_TYPE
+for( $i=0; $i -lt $entry.length; $i+=2 )
+{
+	$filterkey = $entry[$i].ToString().Split(' ')[1]
+	$conditionValue = $entry[$i+1].ToString().Split(' ')[4]
+	Write-Host "$i - $filterkey - $conditionValue"
+
+	if( $conditionValue -like '*c681d488*' -or $conditionValue -like '*df1941c5*' ){
+		echo "Removing ${filterkey}"
+		netsh rpc filter delete filter filterkey=$filterkey
+	}
+}
