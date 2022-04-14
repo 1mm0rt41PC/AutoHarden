@@ -19,10 +19,11 @@
 #
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-
+$MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
 $date = Get-Date -Format 'yyyy-MM-dd-HH-mm-ss'
 
 
+mkdir -Force "${PSScriptRoot}\tmp\" > $null
 mkdir -Force "${PSScriptRoot}\cert\" > $null
 if( -not [System.IO.File]::Exists("${PSScriptRoot}\cert\AutoHarden-CA.pvk") -or -not [System.IO.File]::Exists("${PSScriptRoot}\cert\AutoHarden-CA.cer") ){
 	makecert -n "CN=AutoHarden-CA" -a sha512 -len 4096 -eku 1.3.6.1.5.5.7.3.3 -r -ss Root -sr localmachine -sy 1mm0rt41PC -sv ${PSScriptRoot}\cert\AutoHarden-CA.pvk ${PSScriptRoot}\cert\AutoHarden-CA.cer
@@ -37,17 +38,22 @@ if( -not [System.IO.File]::Exists("${PSScriptRoot}\cert\AutoHarden.pfx") -or -no
 $cert = ls Cert:\CurrentUser\My\ | where { $_.Subject.ToString() -eq "CN=AutoHarden" }
 $AutoHardenCertCA = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PSScriptRoot\cert\AutoHarden-CA.cer"))
 $AutoHardenCert = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PSScriptRoot\cert\AutoHarden.cer"))
+$utf8 = New-Object System.Text.UTF8Encoding $False
+
+
+Get-ChildItem -Recurse -Force $MyDir\WebDomain\*\*.ps1 |where { $_.LinkType } | Remove-Item
+& $MyDir\WebDomain\DispatchRules.ps1
 
 Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 	$AutoHarden_Group = $_.Name
 	$WebDomainPath=$_.FullName
-	$output = "AutoHarden_${AutoHarden_Group}.ps1"
+	$outps1 = "AutoHarden_${AutoHarden_Group}.ps1"
 	echo '####################################################################################################'
 	echo $AutoHarden_Group
 	echo '####################################################################################################'
 	
 	$insertAllAsks = $true
-	[System.IO.File]::WriteAllLines($output, (Get-ChildItem $WebDomainPath\*.ps1 | foreach {
+	$data = (Get-ChildItem $WebDomainPath\*.ps1 | foreach {
 		Write-Host $_.FullName
 		if( -not $_.FullName.Contains('__init__')  -And -not $_.FullName.Contains('__END__') ){
 			if( $insertAllAsks ){
@@ -101,12 +107,15 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 		if( -not $_.FullName.Contains('__init__') -And -not $_.FullName.Contains('__END__') ){
 			echo ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -Completed')
 		}
-	}).Replace('&{AutoHarden_ScriptName}',$output).Replace('&{AutoHardenCert}',$AutoHardenCert).Replace('&{AutoHardenCertCA}', $AutoHardenCertCA).Replace('&{date}',$date).Replace('&{AutoHarden_Group}',$AutoHarden_Group), (New-Object System.Text.UTF8Encoding $False));
+	}).Replace('&{AutoHarden_ScriptName}',$outps1).Replace('&{AutoHardenCert}',$AutoHardenCert).Replace('&{AutoHardenCertCA}', $AutoHardenCertCA).Replace('&{date}',$date).Replace('&{AutoHarden_Group}',$AutoHarden_Group)
+	
+	[System.IO.File]::WriteAllLines("$MyDir\tmp\$outps1", $data, $utf8);
+
+	if( Set-AuthenticodeSignature -filepath "$MyDir\tmp\$outps1" -cert $cert -IncludeChain All ){
+		Write-Host 'Signature OK'
+		mv -Force "$MyDir\tmp\$outps1" "$MyDir\$outps1"
+	}
 }
 
-if( Set-AuthenticodeSignature -filepath $output -cert $cert -IncludeChain All ){
-	Write-Host 'Signature OK'
-	mv -Force $output 'AutoHarden_RELEASE.ps1'
-}else{
-	rm 'AutoHarden_RELEASE.ps1'
-}
+# Clean all symlink
+Get-ChildItem -Recurse -Force $MyDir\WebDomain\*\*.ps1 |where { $_.LinkType } | Remove-Item

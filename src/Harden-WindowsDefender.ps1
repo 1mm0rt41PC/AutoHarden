@@ -42,7 +42,7 @@ if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") -and (ask
 	#
 	# Use advanced protection against ransomware
 	Add-MpPreference -AttackSurfaceReductionRules_Ids C1DB55AB-C21A-4637-BB3F-A12568109D35 -AttackSurfaceReductionRules_Actions Enabled
-	
+
 	if( (Get-Item "C:\Program Files*\VMware\*\vmnat.exe") -eq $null ){
 		# Block credential stealing from the Windows local security authority subsystem (lsass.exe)
 		Add-MpPreference -AttackSurfaceReductionRules_Ids 9E6C4E1F-7D60-472F-BA1A-A39EF669E4B2 -AttackSurfaceReductionRules_Actions Enabled
@@ -64,7 +64,7 @@ if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") -and (ask
 	# Enabled - Users will not be able to access malicious IP addresses and domains
 	# Disable (Default) - The Network protection feature will not work. Users will not be blocked from accessing malicious domains
 	# AuditMode - If a user visits a malicious IP address or domain, an event will be recorded in the Windows event log but the user will not be blocked from visiting the address.
-	Set-MpPreference -EnableNetworkProtection Enabled 
+	Set-MpPreference -EnableNetworkProtection Enabled
 	#
 	################################################################################################################
 	# Enable exploit protection (EMET on Windows 10)
@@ -72,11 +72,10 @@ if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") -and (ask
 	# https://www.wilderssecurity.com/threads/process-mitigation-management-tool.393096/
 	# https://blogs.windows.com/windowsexperience/2018/03/20/announcing-windows-server-vnext-ltsc-build-17623/
 	# ---------------------
-	Get-NetFirewallRule -Name '*AutoHarden*Powershell*' | Disable-NetFirewallRule
-	Invoke-WebRequest -Uri https://demo.wd.microsoft.com/Content/ProcessMitigation.xml -OutFile $env:temp\ProcessMitigation.xml
-	Get-NetFirewallRule -Name '*AutoHarden*Powershell*' | Enable-NetFirewallRule
-	Set-ProcessMitigation -PolicyFilePath $env:temp\ProcessMitigation.xml
-	rm $env:temp\ProcessMitigation.xml
+	$ProcessMitigation = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".xml"
+	mywget -Uri https://demo.wd.microsoft.com/Content/ProcessMitigation.xml -OutFile $ProcessMitigation
+	Set-ProcessMitigation -PolicyFilePath $ProcessMitigation
+	rm -Force $ProcessMitigation
 }else{
 	Remove-MpPreference -AttackSurfaceReductionRules_Ids 9E6C4E1F-7D60-472F-BA1A-A39EF669E4B2 2>$null
 	Remove-MpPreference -AttackSurfaceReductionRules_Ids D4F940AB-401B-4EFC-AADC-AD5F3C50688A 2>$null

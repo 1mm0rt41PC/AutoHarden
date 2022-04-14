@@ -1,5 +1,5 @@
 fwRule @{
-	Name='InternetExplorer'
+	Name='[Deny Internet] InternetExplorer'
 	Group='InternetExplorer'
 	Direction='Outbound'
 	Action='Block'

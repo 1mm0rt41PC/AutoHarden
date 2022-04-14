@@ -20,7 +20,7 @@ if( Get-Command autorunsc -errorAction SilentlyContinue ){
 		autorunsc -nobanner /accepteula -a "*" -c -h -s -v -vt "*" | Out-File -Encoding UTF8 "${autorunsc7z}.csv"
 		Compress-Archive -Path "${autorunsc7z}.csv" -CompressionLevel "Optimal" -DestinationPath "${autorunsc7z}.csv.zip"
 		if( [System.IO.File]::Exists("${autorunsc7z}.csv.zip") ){
-			rm -Force "${autorunsc7z}.csv"
+			Remove-Item -Force "${autorunsc7z}.csv"
 		}
 	}
 }

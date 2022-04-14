@@ -1,2 +1,0 @@
-#Disable-BitLocker -MountPoint 'C:'
-#manage-bde -off C:

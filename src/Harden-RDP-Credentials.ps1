@@ -1,1 +1,1 @@
-Get-Item "HKCU:\Software\Microsoft\Terminal Server Client\Servers\*" -ErrorAction Ignore | Remove-Item -Force -Recurse
+Get-Item "HKCU:\Software\Microsoft\Terminal Server Client\Servers\*" -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse  -ErrorAction SilentlyContinue

@@ -8,6 +8,6 @@ if( $getRole -ne 'Domain Controller' ){
 		Action='Block'
 		RemotePort=445
 		Protocol='tcp'
-		AllowIntranet=$IPForInternet
+		RemoteAddress=$IPForInternet
 	}
 }

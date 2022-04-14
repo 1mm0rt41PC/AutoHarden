@@ -21,7 +21,7 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Cha
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-DNS-Client/Operational" /v Enabled /t REG_DWORD /d 1 /f
 
 if( -not [System.IO.File]::Exists("${AutoHarden_Logs}\AuditPol_BEFORE.log.zip") ){
-	Auditpol /get /category:* | Out-File -Encoding UT8 $AutoHarden_Logs\AuditPol_BEFORE.log
+	Auditpol /get /category:* | Out-File -Encoding UTF8 $AutoHarden_Logs\AuditPol_BEFORE.log
 	Compress-Archive -Path "${AutoHarden_Logs}\AuditPol_BEFORE.log" -CompressionLevel "Optimal" -DestinationPath "${AutoHarden_Logs}\AuditPol_BEFORE.log.zip"
 }
 
@@ -99,8 +99,9 @@ auditpol /set /subcategory:"{0CCE9223-69AE-11D9-BED3-505054503030}" /success:ena
 #   Partage de fichiers,{0CCE9224-69AE-11D9-BED3-505054503030}
 auditpol /set /subcategory:"{0CCE9224-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
 #   Rejet de paquet par la plateforme de filtrage,{0CCE9225-69AE-11D9-BED3-505054503030} == "Filtering Platform Packet Drop"
-auditpol /set /subcategory:"{0CCE9225-69AE-11D9-BED3-505054503030}" /success:enable /failure:disable
+auditpol /set /subcategory:"{0CCE9225-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
 #   Connexion de la plateforme de filtrage,{0CCE9226-69AE-11D9-BED3-505054503030} == "Filtering Platform Connection"
+auditpol /set /subcategory:"{0CCE9226-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
 #   Autres événements d’accès à l’objet,{0CCE9227-69AE-11D9-BED3-505054503030}
 auditpol /set /subcategory:"{0CCE9227-69AE-11D9-BED3-505054503030}" /success:enable /failure:disable
 #   Partage de fichiers détaillé,{0CCE9244-69AE-11D9-BED3-505054503030}
@@ -117,7 +118,7 @@ auditpol /set /subcategory:"{0CCE922A-69AE-11D9-BED3-505054503030}" /success:ena
 #   Création du processus,{0CCE922B-69AE-11D9-BED3-505054503030}
 auditpol /set /subcategory:"{0CCE922B-69AE-11D9-BED3-505054503030}" /success:enable /failure:disable
 # Log process activity
-reg.exe add "hklm\software\microsoft\windows\currentversion\policies\system\audit" /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
+reg add "HKLM\software\microsoft\windows\currentversion\policies\system\audit" /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
 #   Fin du processus,{0CCE922C-69AE-11D9-BED3-505054503030}
 auditpol /set /subcategory:"{0CCE922C-69AE-11D9-BED3-505054503030}" /success:enable /failure:disable
 #   Activité DPAPI,{0CCE922D-69AE-11D9-BED3-505054503030}

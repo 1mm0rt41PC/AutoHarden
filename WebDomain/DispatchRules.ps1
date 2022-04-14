@@ -65,21 +65,38 @@ $rules = @"
 		$servers,
 		'Hardening-DisableSMBServer',
 		'2-Hardening-RPCFiltering'
-	]
+	],
+	'RELEASE': []
 }
 "@ | ConvertFrom-Json
 
+$MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
 
-# Recreate all rules for each role
-$rules | Get-Member -MemberType NoteProperty  | foreach {
-	$key=$_.Name;
-	Get-ChildItem -Attribute ReparsePoint $key\* | Remove-Item
-	Get-ChildItem RELEASE\*.ps1 | foreach {
-		$Name=$_.Name
-		$FullName=$_.FullName
-		New-Item -Path $key\$Name -ItemType SymbolicLink -Value $FullName
-	}
-	$rules."$key" | foreach {
-		Remove-Item $key\$_.ps1
+function logInfo( $msg )
+{
+	Write-Host -NoNewline -Background 'Blue' '[i]'
+	Write-Host " $msg"
+}
+function logError( $msg )
+{
+	Write-Host -NoNewline -Background 'Red' '[X]'
+	Write-Host " $msg"
+}
+
+Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
+	$ps1Rule=$_.Name
+	$FullName=$_.FullName
+	Get-ChildItem -Directory $MyDir | foreach {
+		$tragetFolder=$_.FullName;
+		$tragetFolderName=$_.Name;
+		if( -not [System.IO.File]::Exists("$tragetFolder\$ps1Rule") ){
+			if( -not ($rules."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
+				logInfo "Create $tragetFolder\$ps1Rule"
+				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
+			}else{
+				logError "Ignore $tragetFolder\$ps1Rule"
+				Remove-Item $tragetFolder\$ps1Rule -ErrorAction SilentlyContinue | Out-Null
+			}
+		}
 	}
 }

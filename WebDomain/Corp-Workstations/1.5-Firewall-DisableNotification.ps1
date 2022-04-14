@@ -1,1 +1,0 @@
-C:/Users/1mm0rt41/Local-Tools/HowTo/Harden/Windows/WebDomain/RELEASE/1.5-Firewall-DisableNotification.ps1

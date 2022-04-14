@@ -33,3 +33,6 @@ reg add 'HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1F
 reg add 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\OneDrive' /v PreventNetworkTrafficPreUserSignIn /t REG_DWORD /d 1 /f
 reg add 'HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive' /v DisableFileSync /t REG_DWORD /d 1 /f
 reg add 'HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive' /v DisableFileSyncNGSC /t REG_DWORD /d 1 /f
+
+[System.Environment]::SetEnvironmentVariable('OneDrive','NUL',[System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('OneDrive','NUL',[System.EnvironmentVariableTarget]::Machine)

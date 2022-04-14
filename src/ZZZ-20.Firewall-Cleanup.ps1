@@ -6,6 +6,9 @@ Get-NetFirewallRule -DisplayName '*AutoHarden*' | Enable-NetFirewallRule
 logInfo 'Remove all rules that are not tagged'
 FWRemoveBadRules
 
+try{
+	mkdir -Force $env:windir\system32\logfiles\firewall | Out-Null
+}catch{}
 
 # Enabling firewall
 Get-NetFirewallProfile | foreach {
@@ -19,4 +22,3 @@ Get-NetFirewallProfile | foreach {
 	}
 	$_
 } | Set-NetFirewallProfile -Enabled True -DefaultOutboundAction Allow -DefaultInboundAction Block -AllowInboundRules True -AllowLocalFirewallRules True -AllowLocalIPsecRules True -AllowUnicastResponseToMulticast True -LogAllowed True -LogBlocked True -LogIgnored True -LogFileName "%windir%\system32\logfiles\firewall\pfirewall.log" -LogMaxSizeKilobytes 32767
-

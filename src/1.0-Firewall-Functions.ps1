@@ -39,166 +39,14 @@ $IPForOffice365 = (@"
 52.247.150.191/32, 52.247.150.191/32, 52.96.0.0/14
 "@).replace("`n","").replace("`r","").replace(" ","").split(",")
 
-$utf8 = new-object -TypeName System.Text.UTF8Encoding
-function getHash( $str )
-{
-	$stream = New-Object System.IO.MemoryStream -ArgumentList @(,$utf8.GetBytes($str))
-	return Get-FileHash -Algorithm MD5 -InputStream $stream | Select-Object -ExpandProperty Hash	
-}
-
-
-$G_fwRule = New-Object System.Collections.ArrayList
-function fwRule( $opt )
-{
-	$opt['Enabled'] = 'True';
-	if( $opt.ContainsKey('blockExe') ){
-		$opt['blockExe'] = ($opt['blockExe'] | get-item -ErrorAction Continue)
-	}
-	if( $opt['Action'] -eq 'Block' ){
-		if( $opt['AllowO365'] -and $opt['AllowIntranet'] ){
-			$opt2 = $opt.clone();
-			$opt2.Remove('AllowIntranet');
-			$opt2['Action'] = 'Allow';
-			$opt.Remove('AllowO365');
-			$G_fwRule.Add($opt2);
-		}
-	}
-	$G_fwRule.Add($opt);
-}
-
-
-
-function _applyFwRules_filtering( $param, $name )
-{
-	$param = $param.clone();
-	$route=($param | ConvertTo-Json -Compress)
-	$action=$param['Action']
-	if( $name[0] -ne '[' ){
-		$name = " $name"
-	}
-	$param['Name'] = "[AutoHarden-$AutoHarden_version]$name";
-	$param['DisplayName'] = $param['Name'];
-
-	if( $param['Direction'] -eq '*' ){
-		@('Inbound','Outbound') | foreach {
-			$param['Direction'] = $_;
-			Write-Host "[*] ADD $action firewall rule `"$name`" >$route<"
-			$param.remove('AllowIntranet');
-			$param.remove('AllowO365');	
-			_applyFwRules_updateOrInsert $param
-		}
-		return $null;
-	}
-	if( ($param.ContainsKey('RemotePort') -And -Not $param.ContainsKey('Protocol')) -Or $param['Protocol'] -eq '*' ){
-		@('tcp','udp') | foreach {
-			$param['Protocol'] = $_;
-			$param['Name'] += (' ('+$_+')');
-			$param['DisplayName'] = $param['Name'];
-			Write-Host "[*] ADD $action firewall rule `"$name`" >$route<"
-			$param.remove('AllowIntranet');
-			$param.remove('AllowO365');
-			_applyFwRules_updateOrInsert $param
-		}
-		return $null;
-	}
-	Write-Host "[*] ADD $action firewall rule `"$name`" >$route<"
-	$param.remove('AllowIntranet');
-	$param.remove('AllowO365');	
-	_applyFwRules_updateOrInsert $param
-}
-
-
-function _applyFwRules_updateOrInsert( $param )
-{
-	$param = $param.clone()
-	$hash = getHash $param['Name'];
-	$param['DisplayName'] = $param['Name']+" ($hash)";
-	$nb = (Get-NetFirewallRule -DisplayName "*$hash*" | foreach {
-		logInfo "UPDATING the rule $($param|convertTo-Json)"
-		$tmp = $param.clone();
-		$tmp.remove('Name');
-		$tmp['NewDisplayName'] = $tmp['DisplayName'];
-		$tmp.remove('DisplayName');
-		$tmp.remove('Group');
-		$_ | Set-NetFirewallRule @tmp -ErrorAction Continue
-		$_
-	}).Count
-	if( $nb -eq 0 ){
-		logInfo 'ADDING the rule'
-		New-NetFirewallRule @param -ErrorAction Continue | Out-Null
-	}
-}
-
-
-function _applyFwRules_updateTargetIP( [ref] $param )
-{
-	$tag = '';
-	if( $param.Value.ContainsKey('AllowIntranet') -And $param.Value['AllowIntranet'] ){
-		$tag = '[Except Intranet]';
-		$param.Value['RemoteAddress'] = $IPForInternet;
-
-	}elseif( $param.Value.ContainsKey('AllowO365') -And $param.Value['AllowO365'] ){
-		$tag = '[Except O365]';
-		$param.Value['RemoteAddress'] = $IPForOffice365;
-	}
-	return $tag;
-}
-
-
-function applyFwRules()
-{
-	$G_fwRule | where { $_.Action -eq 'Allow' -Or ( $_.Action -eq 'Block' -And $_.AllowO365 -eq $true -And $_.AllowIntranet -eq $true ) } | foreach {
-		$param = $_.Clone()			
-		$param['Group'] = ('AutoHarden-'+$param['Group']);
-		$param['Action'] = 'Allow';
-		$name = $param['Name'];
-		$param.remove('Name');
-		$tag = _applyFwRules_updateTargetIP ([ref]$param);
-
-		if( $_.ContainsKey('blockExe') ){
-			$exe = $param['blockExe'];
-			$param.remove('blockExe');
-			$exe | get-item -ErrorAction Continue | foreach {
-				$bin = $_.Fullname
-				$param['Program'] = $bin;
-				_applyFwRules_filtering $param "$tag ByPass $name : $bin"
-			}
-		}else{
-			_applyFwRules_filtering $param "$tag $name"
-		}
-	}
-	
-	
-	$G_fwRule | where { $_.Action -eq 'Block' } | foreach {
-		$param = $_.Clone()			
-		$param['Group'] = ('AutoHarden-'+$param['Group']);
-		$name = $param['Name'];
-		$param.remove('Name');
-		if( $_.ContainsKey('blockExe') ){
-			$exe = $param['blockExe'];
-			$param.remove('blockExe');
-			$tag = _applyFwRules_updateTargetIP ([ref]$param);
-			$exe | get-item -ErrorAction Continue | foreach {
-				$bin = $_.Fullname
-				$param['Program'] = $bin;
-				_applyFwRules_filtering $param "$tag $name : $bin"
-			}
-		}else{
-			$tag = _applyFwRules_updateTargetIP ([ref]$param);
-			_applyFwRules_filtering $param "$tag $name"
-		}
-	}
-}
-
-
 
 ###############################################################################
-# FW creation / update
+# FW creation
 function FWRule( $param )
 {
 	$param = $param.clone()
-	if( $param['Direction'] -eq '*' ){
-		Write-Host "Applying Direction"
+	if( -Not $param.ContainsKey('Direction') -or $param['Direction'] -eq '*' ){
+		#Write-Host "Applying Direction"
 		$param['Direction'] = 'Outbound'
 		FWRule $param
 		$param['Direction'] = 'Inbound'
@@ -206,7 +54,7 @@ function FWRule( $param )
 		return $null
 	}
 	if( $param.ContainsKey('blockExe') ){
-		Write-Host "Applying blockExe"
+		#Write-Host "Applying blockExe"
 		$blockExe = $param['blockExe']
 		$param.remove('blockExe')
 		$blockExe | get-item -ErrorAction Continue | foreach {
@@ -215,10 +63,10 @@ function FWRule( $param )
 			$opt['Name'] = ('{0} - {1}' -f $opt['Name'], $opt['Program'])
 			FWRule $opt
 		}
-		return $null		
+		return $null
 	}
 	if( ($param.ContainsKey('RemotePort') -And -Not $param.ContainsKey('Protocol')) -Or $param['Protocol'] -eq '*' ){
-		Write-Host "Applying Protocol"
+		#Write-Host "Applying Protocol"
 		@('tcp','udp') | foreach {
 			$opt = $param.clone()
 			$opt['Protocol'] = $_;
@@ -228,29 +76,13 @@ function FWRule( $param )
 		return $null;
 	}
 
-	$param['DisplayName'] = ('[AutoHarden-{0}] {1}' -f $AutoHarden_version,$param['Name'])
-	$param['Name'] = ('[AutoHarden][{0}] {1}' -f $param['Direction'],$param['Name'])
-	$param['DisplayName'] = $param['DisplayName'] -replace '\] \[', ']['
-	$param['Name'] = $param['Name'] -replace '\] \[', ']['
-	$nb = 0
-	if( (Get-Command Get-NetFirewallRule -ErrorAction SilentlyContinue) ){
-		$nb = (Get-NetFirewallRule | where {$_.Name.StartsWith($param['Name'])} | foreach {
-			$ruleResum=$param| ConvertTo-Json
-			Write-Host "Update rule: $ruleResum"
-			$tmp = $param.clone();
-			$tmp.remove('Name');
-			$tmp['NewDisplayName'] = $tmp['DisplayName'];
-			$tmp.remove('DisplayName');
-			$tmp.remove('Group');
-			$_ | Set-NetFirewallRule @tmp -ErrorAction Continue
-			$_
-		}).Count
+	$param['DisplayName'] = ('[AutoHarden-{0}] {1}' -f $AutoHarden_version,$param['Name']) -replace '\] \[', ']['
+	if( $param.ContainsKey('Group') -and $param['Group'] -ne '' ){
+		$param['Group'] = ('AutoHarden-{0}' -f $param['Group'])
 	}
-	if( $nb -eq 0 ){
-		$ruleResum=$param|ConvertTo-Json
-		Write-Host "Create new rule : $ruleResum"
-		New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue | Out-Null
-	}
+	$param.remove('Name');
+	Write-Host ("Create new FW rule: {0}" -f ($param | ConvertTo-Json))
+	New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue | Out-Null
 }
 
 
@@ -271,10 +103,10 @@ function FWRule( $param )
 #
 # 1. HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules
 # Windows Firewall rules are stored here. These are available through Windows Firewall API and these are visible and editable in WFC.
-# 
+#
 # 2. HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\AppIso\FirewallRules
 # Here are stored Windows Store rules that are defined for specific user accounts. These rules can be removed.
-# 
+#
 # 3. HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\Static\System
 # Here are stored default service based rules, meaning some services may accept connections only on certain ports, other services may not
 # receive or initiate any connection. These can't be deleted. They are loaded and applied before the ones from 1. Windows Firewall API does
@@ -314,7 +146,7 @@ function FWRemoveBadRules
 if( -not (Get-Command New-NetFirewallRule -ErrorAction SilentlyContinue) ){
 	###############################################################################
 	# Degraded compactibility mode of the function New-NetFirewallRule
-	function New-NetFirewallRule{ 
+	function New-NetFirewallRule{
 	[cmdletbinding()]
 	Param (
 		[string] $Enabled,
@@ -374,7 +206,7 @@ if( -not (Get-Command New-NetFirewallRule -ErrorAction SilentlyContinue) ){
 		netsh advfirewall firewall add rule enable=yes name="$DisplayName" action=$Action dir=$Direction $Description $Protocol $RemoteAddress $RemotePort $LocalPort $Program
 	}
 
-	
+
 	###############################################################################
 	# Degraded compactibility mode of the function ConvertTo-Json
 	function ConvertTo-Json{

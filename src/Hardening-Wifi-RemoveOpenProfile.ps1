@@ -1,11 +1,11 @@
 netsh wlan export profile folder=C:\Windows\Temp
-get-item C:\Windows\temp\Wi-Fi-*.xml | foreach {
-	$xml=[xml] (cat $_.FullName)
+Get-Item C:\Windows\temp\Wi-Fi-*.xml | foreach {
+	$xml=[xml] (Get-Content $_.FullName)
 	Write-Host "[*] Lecture du profile wifi $($_.Name)"
 	if( $xml.WLANProfile.MSM.security.authEncryption.authentication.ToLower() -eq "open" ){
 		$p=$xml.WLANProfile.SSIDConfig.SSID.name.Replace('"','')
-		Write-Host "[*] Suppression du profile wifi $p"		
+		Write-Host "[*] Suppression du profile wifi $p"
 		netsh wlan delete profile name="$p" interface=*
 	}
 }
-rm C:\Windows\temp\Wi-Fi-*.xml | Out-Null
+Remove-Item C:\Windows\temp\Wi-Fi-*.xml | Out-Null

@@ -4,9 +4,7 @@
 if( !(Get-Command "choco" -errorAction SilentlyContinue) ){
 	Write-Host "==============================================================================="
 	Write-Host "Install: choco"
-	Get-NetFirewallRule -Name '*AutoHarden*Powershell*' | Disable-NetFirewallRule
-    iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
-	Get-NetFirewallRule -Name '*AutoHarden*Powershell*' | Enable-NetFirewallRule
+    mywget https://chocolatey.org/install.ps1 | Out-String | iex
 }
 Add-MpPreference -AttackSurfaceReductionOnlyExclusions "C:\ProgramData\chocolatey\bin"
 Add-MpPreference -AttackSurfaceReductionOnlyExclusions "C:\ProgramData\chocolatey\lib"
@@ -27,5 +25,5 @@ function chocoInstall( $pk )
 	Write-Host "Install: $pk"
 	choco install $pk -y
 }
-$global:chocoList = & choco list -localonly 
+$global:chocoList = & choco list -localonly
 choco upgrade all -y

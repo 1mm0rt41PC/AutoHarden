@@ -3,8 +3,9 @@
 $tmp=(sc.exe sdshow scmanager).split("`r`n")[1].split(":")[1]
 if( -not $tmp.Contains("(D;;GA;;;NU)") -and -not $tmp.Contains("(D;;KA;;;NU)") ){
 	sc.exe sdset scmanager "D:(D;;GA;;;NU)$tmp"
+	logSuccess "Patched"
 }else{
-	echo "Already patched"
+	logInfo "Already patched"
 }
 
 # https://twitter.com/olamotte33/status/1429386553562963970?s=09

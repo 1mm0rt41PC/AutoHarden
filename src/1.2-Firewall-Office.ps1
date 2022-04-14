@@ -15,14 +15,14 @@
 		"C:\Program Files*\Microsoft Office*\root\*\Powerpnt.exe",
 		"C:\Program Files*\Microsoft Office*\*\root\*\Powerpnt.exe",
 		"C:\Program Files*\Microsoft Office*\*\Powerpnt.exe"
-	)},	
+	)},
 	@{Name='Teams'; blockExe=@(
 		"C:\Users\*\AppData\Local\Microsoft\Teams\*\Squirrel.exe",
 		"C:\Users\*\AppData\Local\Microsoft\Teams\update.exe"
 	)}
 ) | foreach {
 	FWRule @{
-		Name=$_.Name
+		Name=('[Deny Internet] {0}' -f $_.Name)
 		Group='Office'
 		Direction='Outbound'
 		Action='Block'

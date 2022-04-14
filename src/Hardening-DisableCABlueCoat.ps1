@@ -1,6 +1,7 @@
 # See http://blogs.msmvps.com/alunj/2016/05/26/untrusting-the-blue-coat-intermediate-ca-from-windows/
 #Invoke-WebRequest -Uri "https://crt.sh/?id=19538258" -OutFile "${env:temp}/Hardening-DisableCABlueCoat.crt"
-echo @'
+$CABlueCoat = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".cer"
+@'
 -----BEGIN CERTIFICATE-----
 MIIGTDCCBTSgAwIBAgIQUWMOvf4tj/x5cQN2PXVSwzANBgkqhkiG9w0BAQsFADCB
 yjELMAkGA1UEBhMCVVMxFzAVBgNVBAoTDlZlcmlTaWduLCBJbmMuMR8wHQYDVQQL
@@ -37,5 +38,6 @@ Z5rBgiTj1+l09Uxo+2rwfEvHXzVtWSQyuqxRc8DVwCgFGrnJNGJS1coOQdQ91i6Q
 zij5S/djgP1rVHH+MkgJcUQ/2km9GC6B6Y3yMGq6XLVjLvi73Ch2G5mUWkeoZibb
 yQSxTBWG6GJjyDY7543ZK3FH4Ctih/nFgXrjuY7Ghrk=
 -----END CERTIFICATE-----
-'@ > $env:temp/Hardening-DisableCABlueCoat.crt
-Import-Certificate -Filepath "${env:temp}/Hardening-DisableCABlueCoat.crt" -CertStoreLocation Cert:\LocalMachine\Disallowed | out-null
+'@ > $CABlueCoat
+Import-Certificate -Filepath $CABlueCoat -CertStoreLocation Cert:\LocalMachine\Disallowed | out-null
+Remove-Item -Force $CABlueCoat -ErrorAction Ignore
