@@ -75,10 +75,12 @@ function logError( $msg )
 	Write-Host -NoNewline -Background 'Red' '[X]'
 	Write-Host " $msg"
 }
-
+$symLinkList = New-Object -TypeName "System.Text.StringBuilder"
+$symLinkList.AppendLine(".gitignore") | Out-Null
 Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 	$ps1Rule=$_.Name
 	$FullName=$_.FullName
+	$symLinkList.AppendLine("*/$ps1Rule") | Out-Null
 	Get-ChildItem -Directory $MyDir | foreach {
 		$tragetFolder=$_.FullName;
 		$tragetFolderName=$_.Name;
@@ -93,6 +95,7 @@ Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 		}
 	}
 }
+$symLinkList.ToString() | Out-File -Encoding UTF8 "$MyDir\.gitignore"
 Write-Host "All link established"
 $host.SetShouldExit(0)
 exit 0
