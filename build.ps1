@@ -17,6 +17,7 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
+param([switch]$RefreshRules = $false)
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
@@ -41,8 +42,11 @@ $AutoHardenCert = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PSScriptRo
 $utf8 = New-Object System.Text.UTF8Encoding $False
 
 
-Get-ChildItem -Recurse -Force $MyDir\WebDomain\*\*.ps1 |where { $_.LinkType } | Remove-Item
-& $MyDir\WebDomain\DispatchRules.ps1
+if( $RefreshRules ){
+	# Clean all symlink
+	sudo powershell -exec bypass -Nop -Command "& $MyDir\WebDomain\DispatchRules.ps1"
+}
+
 
 Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 	$AutoHarden_Group = $_.Name
@@ -116,6 +120,3 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 		mv -Force "$MyDir\tmp\$outps1" "$MyDir\$outps1"
 	}
 }
-
-# Clean all symlink
-Get-ChildItem -Recurse -Force $MyDir\WebDomain\*\*.ps1 |where { $_.LinkType } | Remove-Item

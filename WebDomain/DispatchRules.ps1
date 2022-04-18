@@ -1,4 +1,6 @@
 # @brief This script is used to auto link all rules in all role with the exception of the following listed options.
+$MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
+Get-ChildItem -Recurse -Force $MyDir\*\*.ps1 |where { $_.LinkType } | Remove-Item
 
 # For all servers, do not apply the following scripts
 $servers = @'
@@ -63,8 +65,6 @@ $rules = @"
 }
 "@ | ConvertFrom-Json
 
-$MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
-
 function logInfo( $msg )
 {
 	Write-Host -NoNewline -Background 'Blue' '[i]'
@@ -93,3 +93,6 @@ Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 		}
 	}
 }
+Write-Host "All link established"
+$host.SetShouldExit(0)
+exit 0
