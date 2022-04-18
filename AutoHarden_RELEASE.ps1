@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-15-00-35-13
-$AutoHarden_version="2022-04-15-00-35-13"
+# Update: 2022-04-19-00-08-18
+$AutoHarden_version="2022-04-19-00-08-18"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -108,7 +108,7 @@ function RpcRuleCreator( $uuid, $name )
 {
 	$1st_uuid=$uuid.Split('-')[0]
 	if( $RpcRules -Like "*$uuid*" -Or $RpcRules -Like "*$1st_uuid*" ){
-		logSuccess "RpcRules is already applied for $name => $uuid"
+		logInfo "RpcRules is already applied for $name => $uuid"
 		return '';
 	}
 	$ret = '';
@@ -148,7 +148,6 @@ function ask( $query, $config )
 	}
 	if( $askMigration.Contains($config) ){
 		if( [System.IO.File]::Exists("${AutoHarden_Folder}\$($askMigration[$config])") ){
-			Write-Host "# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config])"
 			$ret=cat "${AutoHarden_Folder}\$($askMigration[$config])" -ErrorAction Ignore;
 			if( $config -eq 'Hardening-DisableMimikatz__Mimikatz-DomainCredAdv.ask' ){
 				if( $ret -eq 'Yes' ){
@@ -157,6 +156,7 @@ function ask( $query, $config )
 					$ret = 'Yes'
 				}
 			}
+			Write-Host ("# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config]) with the value ${ret} => {0}" -f ($ret -eq 'Yes'))
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 			Remove-Item -Force $AutoHarden_Folder\$askMigration[$config] -ErrorAction Ignore;
 			return $ret -eq 'Yes';
@@ -195,7 +195,7 @@ function _ask( $query, $config, $folder )
 			}
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 		}
-		logSuccess "[${folder}\${config}] is >$ret<"
+		logSuccess ("[${folder}\${config}] is >$ret< => parsed={0}" -f ($ret -eq 'Yes' -Or $ret -eq 'True'))
 		return $ret -eq 'Yes' -Or $ret -eq 'True';
 	}catch{
 		logError "[${folder}\${config}][WARN] An update of AutoHarden require an action from the administrator."
@@ -225,8 +225,8 @@ function reg()
 	$hk = $hk.Replace('HKEY_LOCAL_MACHINE','HKLM:').Replace('HKEY_CLASSES_ROOT','HKCR:').Replace('HKEY_CURRENT_USER','HKCU:')
 
 	$type = 'REG_DWORD'
-	$key = '??'
-	$value = '?'
+	$key = '???'
+	$value = '???'
 
 	for( $i=2; $i -lt $args.Count; $i+=2 )
 	{
@@ -236,6 +236,9 @@ function reg()
 			$key=$args[$i+1]
 		}elseif( $args[$i] -eq '/d' ){
 			$value=$args[$i+1]
+		}elseif( $args[$i] -eq '/f' ){
+			$i-=1
+			# Pass
 		}
 	}
 
@@ -254,10 +257,10 @@ function reg()
 	}elseif( $action -eq 'delete' ){
 		try {
 			Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop
-			logInfo "[${hk}:$key] is now DELETED"
+			logSuccess "[${hk}:$key] is now DELETED"
 			reg.exe $args
 		}catch{
-			logSuccess "[${hk}:$key] is NOT present"
+			logInfo "[${hk}:$key] is NOT present"
 		}
 	}
 }
@@ -340,6 +343,7 @@ try{
 	Remove-Item -ErrorAction SilentlyContinue -Force $AutoHardenCert $AutoHardenCertCA
 }catch{}
 
+Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
 $Trigger = New-ScheduledTaskTrigger -At 08:00am -Daily
 #$Action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-exec AllSigned -nop -File C:\Windows\AutoHarden\AutoHarden.ps1 > C:\Windows\AutoHarden\ScheduledTask.log"
 $Action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-exec ByPass -nop -File ${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1"
@@ -358,7 +362,7 @@ if( ask "Auto update AutoHarden every day at 08h00 AM" "0-AutoUpdateFromWeb.ask"
 }
 }
 else{
-Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -Confirm:$False -ErrorAction SilentlyContinue
 }
 Write-Progress -Activity AutoHarden -Status "0.1-AutoUpdate" -Completed
 echo "####################################################################################################"
@@ -761,18 +765,28 @@ echo "# 1.4-Firewall-RPC"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "1.4-Firewall-RPC" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.4-Firewall-RPC"
-reg add HKLM\SOFTWARE\Microsoft\Rpc\Internet /v Ports /t REG_MULTI_SZ /f /d 60000-65000
-reg add HKLM\SOFTWARE\Microsoft\Rpc\Internet /v PortsInternetAvailable /t REG_SZ /f /d N
-reg add HKLM\SOFTWARE\Microsoft\Rpc\Internet /v UseInternetPorts /t REG_SZ /f /d N
+reg add "HKLM\SOFTWARE\Microsoft\Rpc\Internet" /v Ports /t REG_MULTI_SZ /f /d "60000-65000"
+reg add "HKLM\SOFTWARE\Microsoft\Rpc\Internet" /v PortsInternetAvailable /t REG_SZ /f /d N
+reg add "HKLM\SOFTWARE\Microsoft\Rpc\Internet" /v UseInternetPorts /t REG_SZ /f /d N
 netsh int ipv4 set dynamicport tcp start=60000 num=5000 | Out-Null
 netsh int ipv4 set dynamicport udp start=60000 num=5000 | Out-Null
 netsh int ipv6 set dynamicport tcp start=60000 num=5000 | Out-Null
 netsh int ipv6 set dynamicport udp start=60000 num=5000 | Out-Null
 
-netsh int ipv4 show dynamicport tcp
-netsh int ipv4 show dynamicport udp
-netsh int ipv6 show dynamicport tcp
-netsh int ipv6 show dynamicport udp
+function testNetshRPCPort ($ipversion, $proto)
+{
+	$ret=netsh int $ipversion show dynamicport $proto | Out-String
+	if( $ret.Contains('60000') -and $ret.Contains('5000') ){
+		logSuccess "$ipversion on $proto use the correct RPC range"
+	}else{
+		logError "$ipversion on $proto DO NOT USE the correct RPC range"
+	}
+}
+
+testNetshRPCPort 'ipv4' 'udp'
+testNetshRPCPort 'ipv4' 'tcp'
+testNetshRPCPort 'ipv6' 'udp'
+testNetshRPCPort 'ipv6' 'tcp'
 Write-Progress -Activity AutoHarden -Status "1.4-Firewall-RPC" -Completed
 echo "####################################################################################################"
 echo "# 1.5-Firewall-DisableNotification"
@@ -938,10 +952,18 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\WMI\Autologger\Auto
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f
 schtasks.exe /Change /TN "\Microsoft\Windows\Device Information\Device" /Disable | Out-Null
 
-sc.exe stop DiagTrack
-sc.exe config DiagTrack "start=" disabled
-sc.exe stop dmwappushservice
-sc.exe config dmwappushservice "start=" disabled
+@("DiagTrack","dmwappushservice") | foreach {
+	$srv = Get-Service -ErrorAction SilentlyContinue $_
+	if( $srv -eq $null -or $srv.Count -eq 0 ){
+		logInfo "Service >$_< is not INSTALLED"
+	}elseif( (Get-Service -ErrorAction SilentlyContinue $_).StartType -eq "Disabled" ){
+		logInfo "Service >$_< is already disabled"
+	}else{
+		Stop-Service -ErrorAction SilentlyContinue -Force -Name $_
+		Set-Service -ErrorAction SilentlyContinue -Name $_ -Status Stopped -StartupType Disabled
+		logSuccess "Service >$_< has been disabled"
+	}
+}
 
 # Disable Wifi sense telemetry
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" /v AutoConnectAllowedOEM /t REG_DWORD /d 0 /f
@@ -1018,10 +1040,9 @@ if( $onedriverPath ){
 	Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$env:LOCALAPPDATA\Microsoft\OneDrive" | Out-Null
 	Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$env:PROGRAMDATA\Microsoft OneDrive" | Out-Null
 	Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$env:PROGRAMDATA\Microsoft OneDrive" | Out-Null
-	echo "Removing OneDrive from the Explorer Side Panel."
-	echo .
-	reg delete "HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >$null 2>&1
-	reg delete "HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >$null 2>&1
+	Write-Host "Removing OneDrive from the Explorer Side Panel."
+	reg delete "HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f | Out-Null
+	reg delete "HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f | Out-Null
 }
 # Suppression du OneDrive de explorer
 reg add 'HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}' /v System.IsPinnedToNameSpaceTree /t REG_DWORD /d 0 /f
@@ -1089,7 +1110,15 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "Fix-CVE-2020-16898" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Fix-CVE-2020-16898"
 # Protection against CVE-2020-16898: “Bad Neighbor”
-netsh int ipv6 show int | foreach { $p=$_.trim().split(' ')[0]; [int]::TryParse($p,[ref]$null) -and (netsh int ipv6 set int $p rabaseddnsconfig=disable) -and (write-host "int >$p<") }
+Get-NetIPInterface -AddressFamily ipv6 | foreach{
+	$rfc = (& netsh int ipv6 show int $_.ifIndex) -match '(RFC 6106)'
+	if($rfc -like "*enabled"){
+		logSuccess 'CVE-2020-16898 - "Bad Neighbor" fixed'
+		netsh int ipv6 set int $_.ifIndex rabaseddnsconfig=disable
+	}else{
+		logInfo 'Already fixed against CVE-2020-16898 - "Bad Neighbor"'
+	}
+}
 Write-Progress -Activity AutoHarden -Status "Fix-CVE-2020-16898" -Completed
 echo "####################################################################################################"
 echo "# Fix-HiveNightmare"
@@ -1251,7 +1280,18 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "Harden-VMWareWorkstation" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-VMWareWorkstation"
 # Disable VM Sharing (free the port 443/TCP)
-sc.exe config VMwareHostd start= disabled
+@("VMwareHostd") | foreach {
+	$srv = Get-Service -ErrorAction SilentlyContinue $_
+	if( $srv -eq $null -or $srv.Count -eq 0 ){
+		logInfo "Service >$_< is not INSTALLED"
+	}elseif( (Get-Service -ErrorAction SilentlyContinue $_).StartType -eq "Disabled" ){
+		logInfo "Service >$_< is already disabled"
+	}else{
+		Stop-Service -ErrorAction SilentlyContinue -Force -Name $_
+		Set-Service -ErrorAction SilentlyContinue -Name $_ -Status Stopped -StartupType Disabled
+		logSuccess "Service >$_< has been disabled"
+	}
+}
 Write-Progress -Activity AutoHarden -Status "Harden-VMWareWorkstation" -Completed
 echo "####################################################################################################"
 echo "# Harden-VoiceControl"
@@ -1642,7 +1682,7 @@ echo "# Hardening-DisableNetbios"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableNetbios" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DisableNetbios"
-$(
+@(
 	@{Port=135; proto='tcp'},
 	@{Port=137; proto='UDP'},
 	@{Port=138; proto='UDP'},
@@ -1855,13 +1895,13 @@ echo "# Hardening-Wifi-RemoveOpenProfile"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-Wifi-RemoveOpenProfile" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Wifi-RemoveOpenProfile"
-netsh wlan export profile folder=C:\Windows\Temp
+netsh wlan export profile folder=C:\Windows\Temp | Out-Null
 Get-Item C:\Windows\temp\Wi-Fi-*.xml | foreach {
 	$xml=[xml] (Get-Content $_.FullName)
 	Write-Host "[*] Lecture du profile wifi $($_.Name)"
 	if( $xml.WLANProfile.MSM.security.authEncryption.authentication.ToLower() -eq "open" ){
 		$p=$xml.WLANProfile.SSIDConfig.SSID.name.Replace('"','')
-		Write-Host "[*] Suppression du profile wifi $p"
+		logSuccess "[*] Suppression du profile wifi $p"
 		netsh wlan delete profile name="$p" interface=*
 	}
 }
@@ -2119,15 +2159,14 @@ try{
 function killfakename( $file ){
 	echo "$file ========="
 	#takeown.exe /f $file
-	icacls.exe "$file" /setowner $env:username
+	icacls.exe "$file" /setowner $env:username | Out-Null
 	remove-item -Force $file | Out-Null
 	echo '' | Out-File $file
-	icacls.exe "$file" /setowner $finalUser
-	attrib +s +h $file
-	(Get-Acl $file).Owner
+	icacls.exe "$file" /setowner $finalUser | Out-Null
+	attrib +s +h $file | Out-Null
+	#(Get-Acl $file).Owner
 	#(Get-Acl $file).Access
 }
-
 
 killfakename 'C:\Users\desktop.ini'
 killfakename 'C:\Program Files\desktop.ini'
@@ -2372,10 +2411,14 @@ Get-NetFirewallProfile | foreach {
 	$Name=$_.Name
 	$DefaultInboundAction=$_.DefaultInboundAction
 	if( $_.Enabled -eq $false ){
-		Write-Host -BackgroundColor Red -ForegroundColor White "    [!] ${Name} firewall profile was disabled"
+		logError "${Name} firewall profile was disabled"
+	}else{
+		logInfo "${Name} firewall profile is enable"
 	}
 	if( $_.DefaultInboundAction -ne "Block" ){
-		Write-Host -BackgroundColor Red -ForegroundColor White "    [!] ${Name} firewall profile was DefaultInboundAction=${DefaultInboundAction}"
+		logError "${Name} firewall profile was DefaultInboundAction=${DefaultInboundAction}"
+	}else{
+		logInfo "${Name} firewall profile is well configured"
 	}
 	$_
 } | Set-NetFirewallProfile -Enabled True -DefaultOutboundAction Allow -DefaultInboundAction Block -AllowInboundRules True -AllowLocalFirewallRules True -AllowLocalIPsecRules True -AllowUnicastResponseToMulticast True -LogAllowed True -LogBlocked True -LogIgnored True -LogFileName "%windir%\system32\logfiles\firewall\pfirewall.log" -LogMaxSizeKilobytes 32767
@@ -2394,8 +2437,8 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUOnyu/YZLEVxG9EItqAwahWLn
-# tk+gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU7iFAsekebxq5HIf9h4F2nkpQ
+# gFWgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2453,16 +2496,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFH68ovDsAw/tKsD6nIDSwmdfyBE+MA0GCSqGSIb3DQEBAQUA
-# BIICAFzmsKdROX+SqCDaSfSS5PSjX61jqfsey4Jm6To9p0ItNvujgdr7ADX8qwIi
-# jX1oZO1ozW98mk3Ll0sbFAjL2ekPFOP2kTGY9iSvx1gYab3LW6jkt9bZn2tFe95D
-# p0ed/x4iiZ5eJ9lgQ7qL+KQq/Mnlv8u36hSZhP02uawNK6yOHpPWc2PJ2qjUR0c3
-# cWHurIB1h4kVJcdXTO+I+LbYk78MxBU3wH/y4kIKa/PVn5FJKYybjIPV4yWWKLAc
-# QbGyFa0poEROSvNU4/gJF8Ki5nbhgGZP3fBVUzNbhzZpWCN8br++03W/0+zrGfY3
-# QWXRasP8/QjAnNJhlv4Ld8Sa1jtezJiTXlmkF/26o8TYet0jLHtk7+k+BJt9hmUh
-# 25Er4G/MGskt9yqajJoO9EoF/oE/8s7TPCnUnvmGMwj9aOuEn/FfdEG+xBX5jJfi
-# 32m7RsxKFF49HNdOoqOLQUUfI2TFbZorQSyzN5P1WEp5zPpNVtlh+IKL8QCfIVNa
-# vG768M+Yx70/L2KvV3xetQj6Izj9hC41iUD6bdaqryYoS2bRoba33DAFq9u9aL8a
-# iPWu9HZh4xPC1gOvhRnYxOKniSUKfFcKEsNEi2n4+w+RD0KIhtQbiR9CJhChOUSP
-# 3gvBIvIOtkwso0w/GdjCpnzDXcUejxguolZ/F7JO79LkE1/e
+# KoZIhvcNAQkEMRYEFA0lpmYF5GrJ9dv3pG7eFRjnMNRdMA0GCSqGSIb3DQEBAQUA
+# BIICACPnKZNPzStjbjQmMiVqCYyD1rtaHy4LiuPuUiVZVYaHH5TB5yXcfyEVxAWs
+# Qw46VVqG5qQSgMvihK3KXjWnTCZwmy2a07kk0CC/6T3CQz6AdOKSZQi40AtXK2HL
+# GgosfKpHLchpFBFtgFcSMZ8gL9z60Ko+zSiGqscjvMeINpQ6w5H3V0fYrRXpEr/G
+# lu8/etzLS0sHiVe5G9yx2tU6jl37nM6MIJ8yv0f4lGj9lSai/W94Oa0e6nipuQNI
+# mLutRqUt9vChWUg1Ozm4GUWZgp/JwnKKH26h2W5fWhzsAXxhLxvcZp5cJLVfiDXI
+# old3MW5pTCMGlPEypJlmjvmltcJTnk+E6PZuqw2qrK6s0Smdnxzlq+LhVvAZ9LiK
+# wmaSN0kkWqa63J+BYfCQY/tjW8dqZD24MQz11Iv8BdyznEV+yfpiKxNROSyHZ2mf
+# ujX3uhc47DJlRRiHttlQUrm7dBA6q2OJnkhuLK95l7y3ayikqT1ZSgIoY/96fbLd
+# SWvPf45NtePabzIHOWmNlMG9WqJe0ZdWn5CaeGcbPDQLhEO+zZmhBioLUqa9M0KF
+# whD3bpHQ9lDm3enZLDsN+Y4ruR7oacK8ejjiF9DExwYO2dlqzxqyZEbE3ot5i7CO
+# hh4Dbl8LzBUHl+afq2HffFxThlVHAFow+WzZggAT2ERwt0+6
 # SIG # End signature block

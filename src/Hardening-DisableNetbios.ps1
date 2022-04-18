@@ -1,4 +1,4 @@
-$(
+@(
 	@{Port=135; proto='tcp'},
 	@{Port=137; proto='UDP'},
 	@{Port=138; proto='UDP'},

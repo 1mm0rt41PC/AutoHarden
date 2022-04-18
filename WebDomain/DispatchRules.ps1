@@ -26,7 +26,10 @@ $rules = @"
 		'Crapware-RemoveUseLessSoftware__Uninstall-OneNote',
 		'Crapware-RemoveUseLessSoftware__Uninstall-Skype',
 		'Optimiz-ClasicExplorerConfig',
-		'1.5-Firewall-DisableNotification'
+		'Hardening-AccountRename',
+		'1.5-Firewall-DisableNotification',
+		'Hardening-Co-Installers',
+		'Hardening-DLLHijacking'
 	],
 	'Home': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -35,7 +38,8 @@ $rules = @"
 		'Crapware-RemoveUseLessSoftware__Uninstall-OneNote',
 		'Crapware-RemoveUseLessSoftware__Uninstall-Skype',
 		'Optimiz-DisableAutoUpdate',
-		'Optimiz-DisableDefender'
+		'Optimiz-DisableDefender',
+		'Hardening-Co-Installers'
 	],
 	'Corp-Workstations': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -54,17 +58,6 @@ $rules = @"
 	],
 	'Corp-Servers': [
 		$servers
-	],
-	'Corp-DomainControllers': [
-		$servers,
-		'Hardening-DisableSMBServer',
-		'1.6-Firewall-AvoidSMBOnInternet',
-		'2-Hardening-RPCFiltering'
-	],
-	'Corp-FileServers': [
-		$servers,
-		'Hardening-DisableSMBServer',
-		'2-Hardening-RPCFiltering'
 	],
 	'RELEASE': []
 }

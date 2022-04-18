@@ -15,10 +15,14 @@ Get-NetFirewallProfile | foreach {
 	$Name=$_.Name
 	$DefaultInboundAction=$_.DefaultInboundAction
 	if( $_.Enabled -eq $false ){
-		Write-Host -BackgroundColor Red -ForegroundColor White "    [!] ${Name} firewall profile was disabled"
+		logError "${Name} firewall profile was disabled"
+	}else{
+		logInfo "${Name} firewall profile is enable"
 	}
 	if( $_.DefaultInboundAction -ne "Block" ){
-		Write-Host -BackgroundColor Red -ForegroundColor White "    [!] ${Name} firewall profile was DefaultInboundAction=${DefaultInboundAction}"
+		logError "${Name} firewall profile was DefaultInboundAction=${DefaultInboundAction}"
+	}else{
+		logInfo "${Name} firewall profile is well configured"
 	}
 	$_
 } | Set-NetFirewallProfile -Enabled True -DefaultOutboundAction Allow -DefaultInboundAction Block -AllowInboundRules True -AllowLocalFirewallRules True -AllowLocalIPsecRules True -AllowUnicastResponseToMulticast True -LogAllowed True -LogBlocked True -LogIgnored True -LogFileName "%windir%\system32\logfiles\firewall\pfirewall.log" -LogMaxSizeKilobytes 32767

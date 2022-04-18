@@ -1,1 +1,1 @@
-Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -Confirm:$False -ErrorAction SilentlyContinue

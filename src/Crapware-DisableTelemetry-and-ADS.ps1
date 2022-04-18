@@ -6,10 +6,18 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\WMI\Autologger\Auto
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f
 schtasks.exe /Change /TN "\Microsoft\Windows\Device Information\Device" /Disable | Out-Null
 
-sc.exe stop DiagTrack
-sc.exe config DiagTrack "start=" disabled
-sc.exe stop dmwappushservice
-sc.exe config dmwappushservice "start=" disabled
+@("DiagTrack","dmwappushservice") | foreach {
+	$srv = Get-Service -ErrorAction SilentlyContinue $_
+	if( $srv -eq $null -or $srv.Count -eq 0 ){
+		logInfo "Service >$_< is not INSTALLED"
+	}elseif( (Get-Service -ErrorAction SilentlyContinue $_).StartType -eq "Disabled" ){
+		logInfo "Service >$_< is already disabled"
+	}else{
+		Stop-Service -ErrorAction SilentlyContinue -Force -Name $_
+		Set-Service -ErrorAction SilentlyContinue -Name $_ -Status Stopped -StartupType Disabled
+		logSuccess "Service >$_< has been disabled"
+	}
+}
 
 # Disable Wifi sense telemetry
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" /v AutoConnectAllowedOEM /t REG_DWORD /d 0 /f

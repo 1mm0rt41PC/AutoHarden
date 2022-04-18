@@ -33,7 +33,7 @@ function RpcRuleCreator( $uuid, $name )
 {
 	$1st_uuid=$uuid.Split('-')[0]
 	if( $RpcRules -Like "*$uuid*" -Or $RpcRules -Like "*$1st_uuid*" ){
-		logSuccess "RpcRules is already applied for $name => $uuid"
+		logInfo "RpcRules is already applied for $name => $uuid"
 		return '';
 	}
 	$ret = '';

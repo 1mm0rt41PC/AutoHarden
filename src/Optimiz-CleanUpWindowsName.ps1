@@ -14,15 +14,14 @@ try{
 function killfakename( $file ){
 	echo "$file ========="
 	#takeown.exe /f $file
-	icacls.exe "$file" /setowner $env:username
+	icacls.exe "$file" /setowner $env:username | Out-Null
 	remove-item -Force $file | Out-Null
 	echo '' | Out-File $file
-	icacls.exe "$file" /setowner $finalUser
-	attrib +s +h $file
-	(Get-Acl $file).Owner
+	icacls.exe "$file" /setowner $finalUser | Out-Null
+	attrib +s +h $file | Out-Null
+	#(Get-Acl $file).Owner
 	#(Get-Acl $file).Access
 }
-
 
 killfakename 'C:\Users\desktop.ini'
 killfakename 'C:\Program Files\desktop.ini'

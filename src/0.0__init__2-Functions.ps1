@@ -15,7 +15,6 @@ function ask( $query, $config )
 	}
 	if( $askMigration.Contains($config) ){
 		if( [System.IO.File]::Exists("${AutoHarden_Folder}\$($askMigration[$config])") ){
-			Write-Host "# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config])"
 			$ret=cat "${AutoHarden_Folder}\$($askMigration[$config])" -ErrorAction Ignore;
 			if( $config -eq 'Hardening-DisableMimikatz__Mimikatz-DomainCredAdv.ask' ){
 				if( $ret -eq 'Yes' ){
@@ -24,6 +23,7 @@ function ask( $query, $config )
 					$ret = 'Yes'
 				}
 			}
+			Write-Host ("# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config]) with the value ${ret} => {0}" -f ($ret -eq 'Yes'))
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 			Remove-Item -Force $AutoHarden_Folder\$askMigration[$config] -ErrorAction Ignore;
 			return $ret -eq 'Yes';
@@ -62,7 +62,7 @@ function _ask( $query, $config, $folder )
 			}
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 		}
-		logSuccess "[${folder}\${config}] is >$ret<"
+		logSuccess ("[${folder}\${config}] is >$ret< => parsed={0}" -f ($ret -eq 'Yes' -Or $ret -eq 'True'))
 		return $ret -eq 'Yes' -Or $ret -eq 'True';
 	}catch{
 		logError "[${folder}\${config}][WARN] An update of AutoHarden require an action from the administrator."
@@ -92,8 +92,8 @@ function reg()
 	$hk = $hk.Replace('HKEY_LOCAL_MACHINE','HKLM:').Replace('HKEY_CLASSES_ROOT','HKCR:').Replace('HKEY_CURRENT_USER','HKCU:')
 
 	$type = 'REG_DWORD'
-	$key = '??'
-	$value = '?'
+	$key = '???'
+	$value = '???'
 
 	for( $i=2; $i -lt $args.Count; $i+=2 )
 	{
@@ -103,6 +103,9 @@ function reg()
 			$key=$args[$i+1]
 		}elseif( $args[$i] -eq '/d' ){
 			$value=$args[$i+1]
+		}elseif( $args[$i] -eq '/f' ){
+			$i-=1
+			# Pass
 		}
 	}
 
@@ -121,10 +124,10 @@ function reg()
 	}elseif( $action -eq 'delete' ){
 		try {
 			Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop
-			logInfo "[${hk}:$key] is now DELETED"
+			logSuccess "[${hk}:$key] is now DELETED"
 			reg.exe $args
 		}catch{
-			logSuccess "[${hk}:$key] is NOT present"
+			logInfo "[${hk}:$key] is NOT present"
 		}
 	}
 }
