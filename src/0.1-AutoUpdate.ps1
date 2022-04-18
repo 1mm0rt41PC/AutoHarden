@@ -1,15 +1,32 @@
-# Install cert to avoid git takeover
-$AutoHardenCert = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".cer"
-[IO.File]::WriteAllBytes($AutoHardenCert, [Convert]::FromBase64String("&{AutoHardenCert}"))
-Import-Certificate -Filepath $AutoHardenCert -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
-$AutoHardenCertCA = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".cer"
-[IO.File]::WriteAllBytes($AutoHardenCertCA, [Convert]::FromBase64String("&{AutoHardenCertCA}"))
-Import-Certificate -Filepath $AutoHardenCertCA -CertStoreLocation Cert:\LocalMachine\AuthRoot | Out-Null
-try{
-	Remove-Item -ErrorAction SilentlyContinue -Force $AutoHardenCert $AutoHardenCertCA
-}catch{}
+$ps1TestSign = "${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1"
+if( -not [System.IO.File]::Exists($ps1TestSign) ){
+	$ps1TestSign = "${AutoHarden_Folder}\AutoHarden.ps1"
+}
+for( $i=3; $i -gt 0; $i-- )
+{
+	# Install cert to avoid git takeover
+	$AutoHardenCert = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".cer"
+	while( -not [System.IO.File]::Exists($AutoHardenCert) )
+	{
+		[IO.File]::WriteAllBytes($AutoHardenCert, [Convert]::FromBase64String("&{AutoHardenCert}"))
+		Import-Certificate -Filepath $AutoHardenCert -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
+	}
 
-Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
+	$AutoHardenCertCA = "${env:temp}\"+[System.IO.Path]::GetRandomFileName()+".cer"
+	while( -not [System.IO.File]::Exists($AutoHardenCertCA) )
+	{
+		[IO.File]::WriteAllBytes($AutoHardenCertCA, [Convert]::FromBase64String("&{AutoHardenCertCA}"))
+		Import-Certificate -Filepath $AutoHardenCertCA -CertStoreLocation Cert:\LocalMachine\AuthRoot | Out-Null
+	}
+	try{
+		Remove-Item -ErrorAction SilentlyContinue -Force $AutoHardenCert $AutoHardenCertCA
+	}catch{}
+
+	if( (Get-AuthenticodeSignature $ps1TestSign).Status -eq [System.Management.Automation.SignatureStatus]::Valid ){
+		$i=0;
+	}
+}
+
 $Trigger = New-ScheduledTaskTrigger -At 08:00am -Daily
 #$Action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-exec AllSigned -nop -File C:\Windows\AutoHarden\AutoHarden.ps1 > C:\Windows\AutoHarden\ScheduledTask.log"
 $Action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-exec ByPass -nop -File ${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1"
@@ -25,4 +42,7 @@ if( ask "Auto update AutoHarden every day at 08h00 AM" "0-AutoUpdateFromWeb.ask"
 	}else{
 		logError 'The downloaded PS1 has an invalid signature !'
 	}
+}
+if( [System.IO.File]::Exists("${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1") -And (Get-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -ErrorAction SilentlyContinue).Count -eq 1 ){
+	Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
 }
