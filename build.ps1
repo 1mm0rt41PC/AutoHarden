@@ -17,12 +17,11 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-param([switch]$RefreshRules = $false)
+param([switch]$RefreshRules = $false, [switch]$RemoveSymLink = $false)
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
 $date = Get-Date -Format 'yyyy-MM-dd-HH-mm-ss'
-
 
 mkdir -Force "${PSScriptRoot}\tmp\" > $null
 mkdir -Force "${PSScriptRoot}\cert\" > $null
@@ -119,4 +118,10 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 		Write-Host 'Signature OK'
 		mv -Force "$MyDir\tmp\$outps1" "$MyDir\$outps1"
 	}
+}
+
+if( $RemoveSymLink ){
+	Get-ChildItem -Recurse -Force $MyDir\WebDomain\*\*.ps1 |where { $_.LinkType } | Remove-Item
+	$host.SetShouldExit(0)
+	exit 0
 }

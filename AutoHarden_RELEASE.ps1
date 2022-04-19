@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-19-02-01-17
-$AutoHarden_version="2022-04-19-02-01-17"
+# Update: 2022-04-19-10-53-54
+$AutoHarden_version="2022-04-19-10-53-54"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -377,7 +377,7 @@ if( ask "Auto update AutoHarden every day at 08h00 AM" "0-AutoUpdateFromWeb.ask"
 		logError 'The downloaded PS1 has an invalid signature !'
 	}
 }
-if( [System.IO.File]::Exists("${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1") -And (Get-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -ErrorAction SilentlyContinue).Count -eq 1 ){
+if( [System.IO.File]::Exists("${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1") -And (Get-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -ErrorAction SilentlyContinue) -ne $null ){
 	Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
 }
 }
@@ -2465,8 +2465,8 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUaKeZwCRvljSmW7qKoI6znVMt
-# zjigggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUcKxUb0L/GqoUQap9b1keFMF5
+# 9aygggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2524,16 +2524,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFBVK8C1/AFMW2j2fU6JEO2Eqt07IMA0GCSqGSIb3DQEBAQUA
-# BIICAHirM8QGMoWtQPMh0bdbJR0hAtfVU4VW8ztwKrWudFsR4DI18RCLBf8M9vcV
-# 6WDwuRm54fpr//iH61j4bHKijAebYj8WZUSBc0wI+h+tb+iPdN9XPXZ8V+1KPDi/
-# 6rLZjm5vM2U3ZmdnJCS7iYVQ7xYt7gxIaIEV0IkOD0swm/GltA73afZLZiEnnQBN
-# 7fHLBi1W0G9O3M5ijk28KxxQ5DxT6j/HO+H8aJ5ZJQ867yDHbphLyp5jVfBoBQab
-# mD38WZOCNHkpbCkUncGNBu3d1V+z0TouL3ts3h/dka1Ktd8V93N4j0/mY1l10Ink
-# 6fRIf5b1zBF3DOUCi/lRsiwRl94STse5TsGaLQeOfJF9MXnjfZwmx4y1jOnTArgJ
-# NSe29nN1xWbF+Ld1RG45/tgyGsEce72XPiX/0IRIXFMX9TugwKzdegrIaS1O0zWL
-# eBlKRPXHjIP98sKKUgTQXxotnfs5Hedf/b1MnG6yYQ/HCu2ki6o49g+SE6P7BxSP
-# FchW9x1JHhPF5Zivn0EHdfxY/qtUhbRWTG5yESnh0jZrryu6EzGSParESuHdkf4Z
-# Bl7gWCi94EZLwmFe6Lse6IJrCtssJBO+LaTijlz8nTABIUdXLkJPdiziw6Lqn9vf
-# F5aw2w0yVfFl5SBoKULNMdKt3ix/pYIIUexzODfk7e8daLjZ
+# KoZIhvcNAQkEMRYEFFmhEwRG3vVymVJhd4mN5VoNpcvtMA0GCSqGSIb3DQEBAQUA
+# BIICAKA/9ULBJU8puFdy6d/44CnpeQkOlt35iP6klvpqGOTcKt1h4Nj+6zjrQAFD
+# U6LLN4iNqB65xpl2aotErtVgaoZZ3v3Sr9kYUoUiIk7FvXsL+nlvUn7gLKe9XcTD
+# QKp+J7/ZEC1XU0Tb5h/up+UTHEDdG45RvpfTimfwIHbI7BkCO3/q9JVWce7fzt1g
+# R+QbytEvdsNal8twf2PfIV8X6OL89ZFsQer+H2G8N6bwrR8WQdjLqxkSEKN58aw8
+# FvRGf+5WxVAGYP087oyWcNJasJ4dPWAXCxt2zn+rb3qKysSG2z8qrmRHxj3FNuOg
+# oboiSBxm6jUHrivbQZwr9/9qys14eadF7jCTDedkCsOJ1L45iN/Psy7H2TYRpYx/
+# BCVnZMCoYb+FIEBmFJh/PozPqUjQKAqfsOHZsDGbU/BaMyII2DxXFEfQISAgLrUM
+# fnvZU2fmR+rdH4qCme6QQaP94J+o6P5D3Ky0R8rIHYnX3QH7p1rkLWXZnOc50QZA
+# fQ1vpetS0VW2v/vi5aJT1xHn/m3wt5Vr5iNDOzrv+aIqdRgJcPz7Dxm1KI8MLRbZ
+# A8KoP2Fx/+EpLciyDJHAKincgZjPfEk7uUxVhsuSfo57vioLZFGShXk8ZsFZK4KV
+# mEjXraGKwL7n4ZgRXBysG/1+FZfhYBI2tbHItfMaPfVfHgfo
 # SIG # End signature block
