@@ -29,5 +29,10 @@
 # Did you know? You can anonymously overwrite any NetBIOS name registered on a Windows network, with  a NTB Name Overwrite Demand Request, even today... 😛
 # http://ubiqx.org/cifs/NetBIOS.html
 # Fix => Disable NetBios on all interfaces
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2
+
+# https://admx.help/?Category=KB160177M
+# This secures the machine by telling Windows to treat itself as a NetBIOS P-node (point-to-point system).
+# These systems will only resolve NBT-NS queries using WINS – no broadcasts will take place. Success!
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Netbt\Parameters" /v NodeType /t REG_DWORD /d 2 /f
+
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2

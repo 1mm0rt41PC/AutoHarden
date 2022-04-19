@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-19-01-46-56
-$AutoHarden_version="2022-04-19-01-46-56"
+# Update: 2022-04-19-02-01-17
+$AutoHarden_version="2022-04-19-02-01-17"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1615,8 +1615,13 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Disab
 # Did you know? You can anonymously overwrite any NetBIOS name registered on a Windows network, with  a NTB Name Overwrite Demand Request, even today... 😛
 # http://ubiqx.org/cifs/NetBIOS.html
 # Fix => Disable NetBios on all interfaces
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2
+
+# https://admx.help/?Category=KB160177M
+# This secures the machine by telling Windows to treat itself as a NetBIOS P-node (point-to-point system).
+# These systems will only resolve NBT-NS queries using WINS – no broadcasts will take place. Success!
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Netbt\Parameters" /v NodeType /t REG_DWORD /d 2 /f
+
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableNetbios" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableRemoteServiceManagement"
@@ -1674,6 +1679,9 @@ Write-Progress -Activity AutoHarden -Status "Hardening-DisableWPAD" -PercentComp
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DisableWPAD"
 # Disable wpad service
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WinHttpAutoProxySvc" /t REG_DWORD /v Start /d 4 /f
+
+# https://web.archive.org/web/20160301201733/http://blog.raido.be/?p=426M
+reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /t REG_DWORD /v AutoDetect /d 0 /fM
 
 reg delete "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections" /v "DefaultConnectionSettings" /f
 reg delete "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections" /v "SavedLegacySettings" /f
@@ -2298,8 +2306,8 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUwq6+NAkR7UMI3ZzUWp/rjjcU
-# a2Kgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNL8zZnoADwyuh15ilcwhwYcs
+# /Wmgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2357,16 +2365,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFETaSYFsTyZ1H/k/xc9X4UOMK2sSMA0GCSqGSIb3DQEBAQUA
-# BIICAIwWdJX0MhDDiXELHzracpTjbbRFtdAaTE3aXqIvTO9HzZzLvc0ei15ankaz
-# 7oYa4FvAWtsHIyodABW6N97yumFuGb8dwdi3xpgA1n/CU2cZI0gJPECX/4vEkU55
-# u1UhBDpP4M24lXe38bs3TUfSNy2PEUGkNQpFGxgRRqdz0jWm1SqTAD0H2h1GYDzA
-# 6w5W6G274m/Gusk0gxujdhnbtDJRtWosorzWhLI6vZUJDKkBnGdnr9DPRyMqqQsH
-# Qfr5uzFXzXgoc5WqgZkAjoRsUPPfb8LtYMr7tz9N/h8ZcU33K1vtM876tfwAovNR
-# MjeRYg+oqO4kQZGlbiIgZz94gPHloWdUiKPjWFDqa9noEUyaahDl+9NO/UtjHsWV
-# jdZMgtetZZsehtA0kRp1Nx0LzRNNexYSN22YQbN25KD0S0rpFcM884MQcv7Gn2Hd
-# mDv5NPBKFaYJWHeooSdOiaG4a1gu+pg+xrEK+333zF+uLYgFvFz/jahW5PE2P4dM
-# hnYy92d8Vnsn6Ye9gAbWHb3tV6Q3Kj31VShGEJVr69opcmiMrElf9w+mJr+SKBry
-# L81l1rvuTnakJ62WwCFFQS+7Q2rHSqFXceJze9k46aZJy2aZzf9vh0UDeJPKlhwW
-# pQ3G2t274kjQH2aDD6f6i/AK/p07k+2BiNoVxR/WpkXoaL3p
+# KoZIhvcNAQkEMRYEFNe/5TvxDTkbqedg1yDtBPScxhD1MA0GCSqGSIb3DQEBAQUA
+# BIICABdeEid0K0kUr/Q4LQLysjI2nI5KuVdfmtFLlUPKAKLTthqDoZWp9wRbibdf
+# BujzB7ZPeKmVwqZR3ecxPV8KOwKu+7/mfYBsa0mbNSKUC93ADG+X2MFEfzWAMqRn
+# QDOoQo4qaGLknLB9n37gtG+lkBgBI4E9zivKVGkZDAX9VO93wOBuLxjclMkxsWJI
+# mqgYyIdNWHD2MPj1qh16bEJzIN9MhnKrQE86UsK0zhj1gxLtttl6y61wPapfmUy7
+# hyIrCBOx49Tz6mk7dmZBL0botoLlhXyGAz4lFAoeS83flFVCt8G5HpzrKePpNL5R
+# A9o8it3bqzYYiudN5SE1uxwN4u2CgyerTDOXvRGC0GAM3ynv/Q2jEZ2hCHSRLeOp
+# tAOyDBlf3hf/hI6WmhfwF38xyc06k3ilXJX+pQzKFKrBFR9Akr2BmP1LlT7SbOYb
+# A9UxAKEmsJ/MnOik2UO/oPRf+Rrh0uvDSeVVhLucaSPZcn9hoFA+4RBuCoYfZrQo
+# UtatVnKUWp7b6BTmf66dT10nk6qDVAjBRHHksFX9nodHc4dDxVbDjGNf/czA2xzH
+# /sBBRsfscnqGC0N+39Y6poIvqHxjdQ6W3XGSccjMXz3s5WuRTUKVGbKEpx8LIxq5
+# boeWcYnG4zVqIdFEY4X311Cx+fgYjVwJ5UX5zNQ2nDVGapw4
 # SIG # End signature block
