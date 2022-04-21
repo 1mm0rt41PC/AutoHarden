@@ -33,3 +33,9 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name DisableAll
 # AllowDDE: part of Update ADV170021
 # disables DDE for Word (default setting after installation of update)
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -Value 0 -errorAction SilentlyContinue
+
+# If you enable this policy setting, macros are blocked from running, even if "Enable all macros" is selected in the Macro Settings section of the Trust Center. Also, instead of having the choice to "Enable Content," users will receive a notification that macros are blocked from running. If the Office file is saved to a trusted location or was previously trusted by the user, macros will be allowed to run.
+#Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name BlockContentExecutionFromInternet -Value 1 -errorAction SilentlyContinue
+
+Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
+Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue

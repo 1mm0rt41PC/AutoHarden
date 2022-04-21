@@ -36,3 +36,6 @@
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Netbt\Parameters" /v NodeType /t REG_DWORD /d 2 /f
 
 Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2
+
+wmic /interactive:off nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
+wmic /interactive:off nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2

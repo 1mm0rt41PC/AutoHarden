@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-21-11-18-25
-$AutoHarden_version="2022-04-21-11-18-25"
+# Update: 2022-04-21-12-01-49
+$AutoHarden_version="2022-04-21-12-01-49"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1286,6 +1286,12 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name DisableAll
 # AllowDDE: part of Update ADV170021
 # disables DDE for Word (default setting after installation of update)
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -Value 0 -errorAction SilentlyContinue
+
+# If you enable this policy setting, macros are blocked from running, even if "Enable all macros" is selected in the Macro Settings section of the Trust Center. Also, instead of having the choice to "Enable Content," users will receive a notification that macros are blocked from running. If the Office file is saved to a trusted location or was previously trusted by the user, macros will be allowed to run.
+#Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name BlockContentExecutionFromInternet -Value 1 -errorAction SilentlyContinue
+
+Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
+Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 Write-Progress -Activity AutoHarden -Status "Harden-Office" -Completed
 echo "####################################################################################################"
 echo "# Harden-RDP-Credentials"
@@ -1644,6 +1650,16 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v RunAsPPL /t
 # This sets up your RDP session to NOT store credentials in the memory of the target host.
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v DisableRestrictedAdmin /t REG_DWORD /d 0 /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v DisableRestrictedAdminOutboundCreds /t REG_DWORD /d 1 /f
+
+# https://www.harmj0y.net/blog/redteaming/pass-the-hash-is-dead-long-live-localaccounttokenfilterpolicy/
+# https://en.hackndo.com/pass-the-hash/
+# Affects Windows Remoting (WinRM) deployments
+# 18.3.1 Ensure 'Apply UAC restrictions to local accounts on network logons' is set to 'Enabled'
+# 0=This value builds a filtered token. It's the default value. The administrator credentials are removed.
+# 1=This value builds an elevated token.
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 0 /f
+# 2.3.17.1 UAC - Ensure 'User Account Control: Admin Approval Mode for the Built-in Administrator account' is set to 'Enabled'
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v FilterAdministratorToken /t REG_DWORD /d 1 /f
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableMimikatz__CredentialsGuard"
@@ -1746,6 +1762,9 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Disab
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Netbt\Parameters" /v NodeType /t REG_DWORD /d 2 /f
 
 Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces\tcpip* -Name NetbiosOptions -Value 2
+
+wmic /interactive:off nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
+wmic /interactive:off nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableNetbios" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableRemoteServiceManagement"
@@ -1776,6 +1795,7 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Disab
 # Désactivation des partages administratifs
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v AutoShareWks /t REG_DWORD /d 0 /f
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v AutoShareServer /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v RestrictNullSessAccess /t REG_DWORD /d 1 /f
 
 # Block CobaltStrike from using \\evil.kali\tmp$\becon.exe
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\LanmanWorkstation" /v AllowInsecureGuestAuth /t REG_DWORD /d 0 /f
@@ -1785,17 +1805,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\LanmanWorkstation" /v AllowIns
 
 sc.exe config lanmanserver start= disabled
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableSMBServer" -Completed
-echo "####################################################################################################"
-echo "# Hardening-DisableSMBv1"
-echo "####################################################################################################"
-Write-Progress -Activity AutoHarden -Status "Hardening-DisableSMBv1" -PercentComplete 0
-Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DisableSMBv1"
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v SMB1 /t REG_DWORD /d 0 /f
-reg add "HKLM\System\CurrentControlSet\Services\LanManServer\Parameters" /v EnableSecuritySignature /t REG_DWORD /d 1 /f
-reg add "HKLM\System\CurrentControlSet\Services\LanManServer\Parameters" /v RequireSecuritySignature /t REG_DWORD /d 1 /f
-reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v EnableSecuritySignature /t REG_DWORD /d 1 /f
-reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v RequireSecuritySignature /t REG_DWORD /d 1 /f
-Write-Progress -Activity AutoHarden -Status "Hardening-DisableSMBv1" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableWPAD"
 echo "####################################################################################################"
@@ -1891,7 +1900,47 @@ cmd /c ftype Microsoft.PowerShellXMLData.1="C:\Windows\notepad.exe" "%1"
 cmd /c ftype Microsoft.PowerShellConsole.1="C:\Windows\notepad.exe" "%1"
 # .xml
 cmd /c ftype "XML Script Engine"="C:\Windows\notepad.exe" "%1"
+ftype sctfile="%systemroot%\system32\notepad.exe" "%1"
+ftype urlfile="%systemroot%\system32\notepad.exe" "%1"
+# https://www.trustwave.com/Resources/SpiderLabs-Blog/Firework--Leveraging-Microsoft-Workspaces-in-a-Penetration-Test/
+ftype wcxfile="%systemroot%\system32\notepad.exe" "%1"
+# https://bohops.com/2018/08/18/abusing-the-com-registry-structure-part-2-loading-techniques-for-evasion-and-persistence/
+#ftype mscfile="%systemroot%\system32\notepad.exe" "%1"
+
+# https://rinseandrepeatanalysis.blogspot.com/2018/09/dde-downloaders-excel-abuse-and.html
+ftype slkfile="%systemroot%\system32\notepad.exe" "%1"
+ftype iqyfile="%systemroot%\system32\notepad.exe" "%1"
+ftype prnfile="%systemroot%\system32\notepad.exe" "%1"
+ftype diffile="%systemroot%\system32\notepad.exe" "%1"
+
+# CVE-2020-0765 impacting Remote Desktop Connection Manager (RDCMan) configuration files - MS won't fix
+ftype rdgfile="%systemroot%\system32\notepad.exe" "%1"
 Write-Progress -Activity AutoHarden -Status "Hardening-FileExtension" -Completed
+echo "####################################################################################################"
+echo "# Hardening-LDAP"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-LDAP" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-LDAP"
+# 1- Negotiated; 2-Required
+
+# LDAP client
+# 2.3.11.8 Ensure 'Network security: LDAP client signing requirements' is set to 'Negotiate signing' or higher
+reg add "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\LDAP" /v LDAPClientIntegrity /t REG_DWORD /d 2 /f
+
+
+# LDAP Server
+# Domain controller LDAP server signing requirements
+reg add "HKLM\System\CurrentControlSet\Services\NTDS\Parameters" /v LDAPServerIntegrity /t REG_DWORD /d 2 /f
+# 18.3.5 (L1) Ensure 'Extended Protection for LDAP Authentication (Domain Controllers only)' is set to 'Enabled: Enabled, always (recommended)' (DC Only) (Scored)
+reg add "HKLM\System\CurrentControlSet\Services\NTDS\Parameters" /v LdapEnforceChannelBinding /t REG_DWORD /d 2 /f
+
+# Ensure 'Domain member: Digitally encrypt or sign secure channel data (always)' is set to 'Enabled'
+reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v RequireSignOrSeal /t REG_DWORD /d 1 /f
+# Ensure 'Domain member: Digitally encrypt secure channel data (when possible)' is set to 'Enabled'
+reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v SealSecureChannel /t REG_DWORD /d 1 /f
+# Ensure 'Domain member: Digitally sign secure channel data (when possible)' is set to 'Enabled'
+reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v SignSecureChannel /t REG_DWORD /d 1 /f
+Write-Progress -Activity AutoHarden -Status "Hardening-LDAP" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Navigator"
 echo "####################################################################################################"
@@ -1924,6 +1973,29 @@ else{
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowToGetHelp /f
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-RemoteAssistance" -Completed
+echo "####################################################################################################"
+echo "# Hardening-SMB"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-SMB" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-SMB"
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v SMB1 /t REG_DWORD /d 0 /f
+reg add "HKLM\System\CurrentControlSet\Services\LanManServer\Parameters" /v EnableSecuritySignature /t REG_DWORD /d 1 /f
+reg add "HKLM\System\CurrentControlSet\Services\LanManServer\Parameters" /v RequireSecuritySignature /t REG_DWORD /d 1 /f
+reg add "HKLM\System\CurrentControlSet\Services\LanManServer\Parameters" /v EnablePlainTextPassword /t REG_DWORD /d 0 /f
+reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v EnableSecuritySignature /t REG_DWORD /d 1 /f
+reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v RequireSecuritySignature /t REG_DWORD /d 1 /f
+
+powershell.exe Disable-WindowsOptionalFeature -Online -FeatureName smb1protocol
+Write-Progress -Activity AutoHarden -Status "Hardening-SMB" -Completed
+echo "####################################################################################################"
+echo "# Hardening-UAC"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-UAC" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-UAC"
+# Enable UAC
+# This key is called EnableLUA because User Access Control was previously called Limited User Account (LUA).
+reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /t REG_DWORD /v EnableLUA /d 1 /f
+Write-Progress -Activity AutoHarden -Status "Hardening-UAC" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Wifi-RemoveOpenProfile"
 echo "####################################################################################################"
@@ -2471,8 +2543,8 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUgecxT9egXzKcUgP2ff35/52u
-# LJegggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUxhD0jcISmKlua6uMOcunsfSm
+# ooGgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2530,16 +2602,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFH1B5JpmJI2NFpVNeuxz8AZLfLiIMA0GCSqGSIb3DQEBAQUA
-# BIICAAQggfGDUgXCTAR79lU6EgIBmw0NZ5/ymmqBsw+9LXPEUlIxeEsfUtMuFG4v
-# UAnLIBPQnh5/DTbyK1b/b8lLzA3YojkAtR14H/J9prACbNX8AGotrTCNWQEEDPKl
-# aUtNRzupg3ojuYdxaoavBgW1eoXe4bJGvMlwSM09717EXojZ6crOTamXtcI5Pw6p
-# IN8KdK0SKFnqvgAy+AH+02WMvoZJY1Xn6pFHxMCvHjqJ228zXJc+43CXt6zQxFOl
-# JMlojicdPWY3lWmaB5ptZ3k8qK8Qem7tE0qK1VoL0LuNVA3JqvCyNcfyseWREyZi
-# aqqXaH4I6aOFNiz/QyJhYghkzqwRKrpbbRlF9KMMTLshDM09L8Fp4cvxdMFuWiEM
-# E0hoQmEQ5bnwMh/lb9YVMsrIiSxV6M++xJskdk/joVVWi9Lo8091hUnLXgj+qE3X
-# E2OHwfU83yRz22bpzTSe/IlL/+C8l4y2zJrSQxn9ZRS6jbcHcpD6w+lOyt1sRPEI
-# ZpuwhQ/nvvNvfw+4/gEzpvX98mVAoDjlFwKaxS52j4JARgTWsSklBzLT4mKtO/aY
-# 3a0VMIw7jaJRRXda16T4t0IleYI7/ONEfiGq+Hooegh72DzBZlqMlEgWyI9KqIxi
-# reVFmivwNhcmbfomkF9ewH2+kdEoG/42Hs9trX43hIzb+UhW
+# KoZIhvcNAQkEMRYEFHMaJxeKwENGyF54ofv6IPNh8cTAMA0GCSqGSIb3DQEBAQUA
+# BIICACjzxS2EnTTOR6YXRwiENM90vkpse+VA1ZwhR416hn7MUOfTqwkKr1ctJi4g
+# UH+mXhC4XxcBb54IEhw6jTNRdttmcIZGJ7RotaRSoCxpXK+PIPyTIZHRpYHqr2Rl
+# qY8vfSbUoO/Q9SbVWD6tnztNif/V2buPaAzYS1l9C5fZHDUC+5qtfWsIWCOFGLWz
+# o12QPYwxa/6/SpZ+uskmvdLZUc3j1LdvOPz5oA359/k2dJ6lKzaF3D2lNK5ea2eo
+# Hf+YRA2yuvHr4wJf4HOZ3OPCzNMhln7UvgTNQOT9+BnAFHA+Xj7gFqcKZqI2FWyM
+# 9TEBzgSyHK2tAtsi1//ian1K7o5guV3cUqLFMdaZGIPjrqx5FD28ChYJ5QuBsrVh
+# vdWpGS1EnqN/YFKwMtg8huWZqR3rnvdpaI6VO0RJtleu2/C/WqPyEoyfaFXzag25
+# kiJ6/9qQHHAWYHSk+AooTY3xXAbfhZRByzSFXnEAfDrUsyczBXUj54b7GHuokQaW
+# gT/VkacpSRB1JHeET0GQPgXOFqEi8FWDGoUuzRgizyu7IaVqz+n4s3CPAtyfiJy3
+# bkz8VQJc+PYV1R0FDAfES8V1QtmADZzaoUFwZ7NEp8m4BhRVoZEBz4tR7XDOuojA
+# EIUMJIrXSIaUvOntgPU+ojrbUnsHQDWEV6W3NQUJMDyixtei
 # SIG # End signature block
