@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-19-10-53-54
-$AutoHarden_version="2022-04-19-10-53-54"
+# Update: 2022-04-21-11-18-25
+$AutoHarden_version="2022-04-21-11-18-25"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -245,7 +245,7 @@ function reg()
 	if( $action -eq 'add' ){
 		try {
 			if( (Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop) -eq $value ){
-				logInfo "[${hk}:$key] is OK"
+				logInfo "[${hk}:$key] is OK ($value)"
 			}else{
 				logSuccess "[${hk}:$key] is now set to $value"
 				reg.exe $args
@@ -1672,24 +1672,30 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz__Mimikatz-DomainCredAdv" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DisableMimikatz__Mimikatz-DomainCredAdv"
 if( ask "Harden domain credential against hijacking ? WARNING If this Windows is a mobile laptop, this configuration will break this Windows !!!  Harden domain credential against hijacking" "Hardening-DisableMimikatz__Mimikatz-DomainCredAdv.ask" ){
+# Network access: Do not allow storage of passwords and credentials for network authentication
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableDomainCreds /t REG_DWORD /d 1 /f
+# The memory will be cleared in 30 seconds after the user has logged off.
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v TokenLeakDetectDelaySecs /t REG_DWORD /d 30 /f
 # 'Allow all' = '0'
 # 'Deny all domain accounts' = '1'
 # 'Deny all accounts' = '2'
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictReceivingNTLMTraffic /t REG_DWORD /d 2 /f
-reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictSendingNTLMTraffic /t REG_DWORD /d 2 /f
+# 0) All all
+# 1) Audit
+# 2) Disable NetNTLM auth
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictSendingNTLMTraffic /t REG_DWORD /d 1 /f
 
-#A TEST#######reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinClientSec /t REG_DWORD /d 0x20080000 /f
-#A TEST#######reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinServerSec /t REG_DWORD /d 0x20080000 /f
+# 0x00000010  = Require message integrity
+# 0x00000020  = Require message confidentiality
+# 0x00080000  = Require NTLMv2 session security
+# 0x20000000  = Require 128-bit encryption
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinClientSec /t REG_DWORD /d 0x20080000 /f
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinServerSec /t REG_DWORD /d 0x20080000 /f
 }
 else{
-reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableDomainCreds /t REG_DWORD /d 0 /f 2>$null
+reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableDomainCreds /f 2>$null
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v TokenLeakDetectDelaySecs /f 2>$null
 
-# 'Allow all' = '0'
-# 'Deny all domain accounts' = '1'
-# 'Deny all accounts' = '2'
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictReceivingNTLMTraffic /t REG_DWORD /d 0 /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictReceivingNTLMTraffic /t REG_DWORD /d 0 /f
 
@@ -2465,8 +2471,8 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUcKxUb0L/GqoUQap9b1keFMF5
-# 9aygggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUgecxT9egXzKcUgP2ff35/52u
+# LJegggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2524,16 +2530,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFFmhEwRG3vVymVJhd4mN5VoNpcvtMA0GCSqGSIb3DQEBAQUA
-# BIICAKA/9ULBJU8puFdy6d/44CnpeQkOlt35iP6klvpqGOTcKt1h4Nj+6zjrQAFD
-# U6LLN4iNqB65xpl2aotErtVgaoZZ3v3Sr9kYUoUiIk7FvXsL+nlvUn7gLKe9XcTD
-# QKp+J7/ZEC1XU0Tb5h/up+UTHEDdG45RvpfTimfwIHbI7BkCO3/q9JVWce7fzt1g
-# R+QbytEvdsNal8twf2PfIV8X6OL89ZFsQer+H2G8N6bwrR8WQdjLqxkSEKN58aw8
-# FvRGf+5WxVAGYP087oyWcNJasJ4dPWAXCxt2zn+rb3qKysSG2z8qrmRHxj3FNuOg
-# oboiSBxm6jUHrivbQZwr9/9qys14eadF7jCTDedkCsOJ1L45iN/Psy7H2TYRpYx/
-# BCVnZMCoYb+FIEBmFJh/PozPqUjQKAqfsOHZsDGbU/BaMyII2DxXFEfQISAgLrUM
-# fnvZU2fmR+rdH4qCme6QQaP94J+o6P5D3Ky0R8rIHYnX3QH7p1rkLWXZnOc50QZA
-# fQ1vpetS0VW2v/vi5aJT1xHn/m3wt5Vr5iNDOzrv+aIqdRgJcPz7Dxm1KI8MLRbZ
-# A8KoP2Fx/+EpLciyDJHAKincgZjPfEk7uUxVhsuSfo57vioLZFGShXk8ZsFZK4KV
-# mEjXraGKwL7n4ZgRXBysG/1+FZfhYBI2tbHItfMaPfVfHgfo
+# KoZIhvcNAQkEMRYEFH1B5JpmJI2NFpVNeuxz8AZLfLiIMA0GCSqGSIb3DQEBAQUA
+# BIICAAQggfGDUgXCTAR79lU6EgIBmw0NZ5/ymmqBsw+9LXPEUlIxeEsfUtMuFG4v
+# UAnLIBPQnh5/DTbyK1b/b8lLzA3YojkAtR14H/J9prACbNX8AGotrTCNWQEEDPKl
+# aUtNRzupg3ojuYdxaoavBgW1eoXe4bJGvMlwSM09717EXojZ6crOTamXtcI5Pw6p
+# IN8KdK0SKFnqvgAy+AH+02WMvoZJY1Xn6pFHxMCvHjqJ228zXJc+43CXt6zQxFOl
+# JMlojicdPWY3lWmaB5ptZ3k8qK8Qem7tE0qK1VoL0LuNVA3JqvCyNcfyseWREyZi
+# aqqXaH4I6aOFNiz/QyJhYghkzqwRKrpbbRlF9KMMTLshDM09L8Fp4cvxdMFuWiEM
+# E0hoQmEQ5bnwMh/lb9YVMsrIiSxV6M++xJskdk/joVVWi9Lo8091hUnLXgj+qE3X
+# E2OHwfU83yRz22bpzTSe/IlL/+C8l4y2zJrSQxn9ZRS6jbcHcpD6w+lOyt1sRPEI
+# ZpuwhQ/nvvNvfw+4/gEzpvX98mVAoDjlFwKaxS52j4JARgTWsSklBzLT4mKtO/aY
+# 3a0VMIw7jaJRRXda16T4t0IleYI7/ONEfiGq+Hooegh72DzBZlqMlEgWyI9KqIxi
+# reVFmivwNhcmbfomkF9ewH2+kdEoG/42Hs9trX43hIzb+UhW
 # SIG # End signature block

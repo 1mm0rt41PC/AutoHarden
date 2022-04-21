@@ -112,7 +112,7 @@ function reg()
 	if( $action -eq 'add' ){
 		try {
 			if( (Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop) -eq $value ){
-				logInfo "[${hk}:$key] is OK"
+				logInfo "[${hk}:$key] is OK ($value)"
 			}else{
 				logSuccess "[${hk}:$key] is now set to $value"
 				reg.exe $args
