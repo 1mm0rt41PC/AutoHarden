@@ -17,13 +17,14 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-04-21-12-05-51
-$AutoHarden_version="2022-04-21-12-05-51"
+# Update: 2022-04-28-11-51-01
+$AutoHarden_version="2022-04-28-11-51-01"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 Add-Type -AssemblyName System.Windows.Forms
+
 $AutoHarden_Folder='C:\Windows\AutoHarden'
 $AutoHarden_Logs="${AutoHarden_Folder}\logs"
 $AutoHarden_AsksFolder="${AutoHarden_Folder}\asks"
@@ -32,6 +33,7 @@ $AutoHarden_Asks=($AutoHarden_Group -eq 'RELEASE')
 $AutoHarden_WebDomain="https://raw.githubusercontent.com/1mm0rt41PC/AutoHarden/master/AutoHarden_${AutoHarden_Group}.ps1"
 #$AutoHarden_SysmonUrl="https://raw.githubusercontent.com/olafhartong/sysmon-modular/master/sysmonconfig.xml"
 $AutoHarden_SysmonUrl="https://raw.githubusercontent.com/1mm0rt41PC/AutoHarden/master/sysmonconfig.xml"
+
 ###############################################################################
 # FUNCTIONS - Const var
 $askMigration = ConvertFrom-StringData -StringData @'
@@ -56,6 +58,7 @@ $getRole = @{
 }[$getRole.ProductType];
 
 $isDomainLinked = ( "\\$($env:COMPUTERNAME)" -eq $env:LOGONSERVER -And  $getRole -eq "Domain Controller" ) -Or "\\$($env:COMPUTERNAME)" -ne $env:LOGONSERVER
+
 ###############################################################################
 # FUNCTIONS - Logs
 function logInfo( $msg )
@@ -73,6 +76,7 @@ function logError( $msg )
 	Write-Host -NoNewline -Background 'Red' '[X]'
 	Write-Host " $msg"
 }
+
 ###############################################################################
 # FUNCTIONS - RPC
 $RpcRules = (netsh rpc filter show filter).Replace(' ','')
@@ -131,19 +135,29 @@ add filter
 
 "@
 }
+
 ###############################################################################
 # FUNCTIONS - Global
+$global:asks_cache = @{}
+
 function ask( $query, $config )
 {
+	if( $global:asks_cache.ContainsKey($config) ){
+		Write-Host ("# [${AutoHarden_AsksFolder}\${config}] In cache => {0}" -f $global:asks_cache[$config])
+		return $global:asks_cache[$config];
+	}
 	if( [System.IO.File]::Exists("${AutoHarden_AsksFolder}\${config}") ){
 		Write-Host "# [${AutoHarden_AsksFolder}\${config}] Exist => Using the new file location"
-		return _ask $query $config $AutoHarden_AsksFolder
+		$ret = _ask $query $config $AutoHarden_AsksFolder
+		$global:asks_cache[$config] = $ret
+		return $ret;
 	}
 	if( [System.IO.File]::Exists("${AutoHarden_Folder}\${config}") ){
 		Write-Host "# [${AutoHarden_Folder}\${config}] The new 'ask' location doesn't exist but the old one exist => Using the old file location"
 		$ret = _ask $query $config $AutoHarden_Folder
 		[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}", "$ret", (New-Object System.Text.UTF8Encoding $False));
 		Remove-Item -Force "${AutoHarden_Folder}\${config}" -ErrorAction Ignore;
+		$global:asks_cache[$config] = $ret
 		return $ret;
 	}
 	if( $askMigration.Contains($config) ){
@@ -159,11 +173,14 @@ function ask( $query, $config )
 			Write-Host ("# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config]) with the value ${ret} => {0}" -f ($ret -eq 'Yes'))
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 			Remove-Item -Force $AutoHarden_Folder\$askMigration[$config] -ErrorAction Ignore;
-			return $ret -eq 'Yes';
+			$global:asks_cache[$config] = $ret -eq 'Yes'
+			return $global:asks_cache[$config];
 		}
 	}
 	Write-Host "# [${AutoHarden_AsksFolder}\${config}] This parameter is new and doesn't exist at all"
-	return _ask $query $config $AutoHarden_AsksFolder
+	$ret = _ask $query $config $AutoHarden_AsksFolder
+	$global:asks_cache[$config] = $ret
+	return $ret;
 }
 
 
@@ -181,7 +198,12 @@ function _ask( $query, $config, $folder )
 				}
 				Write-Host ""
 				do{
-					$ret = (Read-Host "${query}? (Y/n)").substring(0,1).toupper()
+					$ret = (Read-Host "${query}? (Y/n)").toupper()
+					if( $ret.Length -gt 0 ){
+						$ret = $ret.substring(0,1)
+					}else{
+						$ret = 'Y'
+					}
 				}while( $ret -ne 'Y' -and $ret -ne 'N' -and $ret -ne '' );
 				if( $ret -eq 'Y' ){
 					$ret = 'Yes'
@@ -201,9 +223,9 @@ function _ask( $query, $config, $folder )
 		logError "[${folder}\${config}][WARN] An update of AutoHarden require an action from the administrator."
 		if( $global:AutoHarden_boradcastMsg -And $AutoHarden_Asks ) {
 			$global:AutoHarden_boradcastMsg=$false
-			msg * "An update of AutoHarden require an action from the administrator. Please run ${AutoHarden_Folder}\AutoHarden.ps1"
+			msg * "An update of AutoHarden require an action from the administrator.`r`n`r`n${query}?`r`nPlease run ${AutoHarden_Folder}\AutoHarden.ps1"
 		}
-		return $false;
+		return $null;
 	}
 }
 
@@ -268,7 +290,7 @@ function reg()
 function mywget( $Uri, $OutFile=$null )
 {
 	$ret = $null
-	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' | Disable-NetFirewallRule
+	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' -ErrorAction SilentlyContinue | Disable-NetFirewallRule
 	try{
 		if( $OutFile -eq $null ){
 			$ret=Invoke-WebRequest -UseBasicParsing -Uri $Uri
@@ -283,9 +305,10 @@ function mywget( $Uri, $OutFile=$null )
 		}
 
 	}
-	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' | Enable-NetFirewallRule
+	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' -ErrorAction SilentlyContinue | Enable-NetFirewallRule
 	return $ret;
 }
+
 if( ![bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544") ){  Write-Host -BackgroundColor Red -ForegroundColor White "Administrator privileges required ! This terminal has not admin priv. This script ends now !"; pause;exit;}
 mkdir $AutoHarden_Folder -Force -ErrorAction Continue | Out-Null
 mkdir $AutoHarden_Logs -Force -ErrorAction Continue | Out-Null
@@ -297,23 +320,50 @@ Start-Transcript -Force -IncludeInvocationHeader -Append ($AutoHardenTransScript
 #$DebugPreference = "Continue"
 #$VerbosePreference = "Continue"
 $InformationPreference = "Continue"
+
 Get-ChildItem -File $AutoHarden_Folder\*.log | foreach {
 	$name = $_.Name
 	$_ | Compress-Archive -CompressionLevel "Optimal" -DestinationPath ${AutoHarden_Logs}\${name}.zip -ErrorAction SilentlyContinue
 }
+
 ####################################################################################################
 logInfo "Asking questions for the configuration"
-ask "Execute AutoHarden every day at 08h00 AM" "0.1-AutoUpdate.ask"
-ask "Block Internet communication for evil tools ? This filtering prevents viruses from downloading the payload." "1.1-Firewall-Malware.ask"
-ask "Block Internet communication for Word and Excel ? Excel and Word will still be able to access files on local network shares. This filtering prevents viruses from downloading the payload.  Block Internet communication for Word and Excel" "1.2-Firewall-Office.ask"
-ask "Block Internet communication for 'Internet Explorer' ? 'Internet Explorer' will still be able to access web server on local network. This filtering prevents viruses from downloading the payload.  Block Internet communication for 'Internet Explorer'" "1.3-Firewall-IE.ask"
-ask "Avoid sending notification to Users about the firewall" "1.5-Firewall-DisableNotification.ask"
-ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask"
-ask "Disable voice control" "Harden-VoiceControl.ask"
-ask "Allow auto installation of vendor's application/drivers by the user" "Hardening-Co-Installers.ask"
-ask "Do you want to enable 'Credentials Guard' and disable VMWare/VirtualBox" "Hardening-DisableMimikatz__CredentialsGuard.ask"
-ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask"
-ask "Replace notepad with notepad++" "Software-install-notepad++.ask"
+ask "Fetch the latest version of AutoHarden from Github every day at 08h00 AM" "0-AutoUpdateFromWeb.ask" | Out-Null
+ask "Execute AutoHarden every day at 08h00 AM" "0.1-AutoUpdate.ask" | Out-Null
+ask "Block Internet communication for evil tools ?
+This filtering prevents viruses from downloading the payload." "1.1-Firewall-Malware.ask" | Out-Null
+ask "Block Internet communication for Word and Excel ?
+Excel and Word will still be able to access files on local network shares.
+This filtering prevents viruses from downloading the payload.
+
+Block Internet communication for Word and Excel" "1.2-Firewall-Office.ask" | Out-Null
+ask "Block Internet communication for 'Internet Explorer' ?
+'Internet Explorer' will still be able to access web server on local network.
+This filtering prevents viruses from downloading the payload.
+
+Block Internet communication for 'Internet Explorer'" "1.3-Firewall-IE.ask" | Out-Null
+ask "Disable SNMP communication (can break printers)" "1.4-Firewall-BlockOutgoingSNMP.ask" | Out-Null
+ask "Avoid sending notification to Users about the firewall" "1.5-Firewall-DisableNotification.ask" | Out-Null
+ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask" | Out-Null
+ask "Remove OneDrive" "Crapware-Onedrive.ask" | Out-Null
+ask "Uninstall OneNote" "Crapware-RemoveUseLessSoftware__Uninstall-OneNote.ask" | Out-Null
+ask "Uninstall Skype" "Crapware-RemoveUseLessSoftware__Uninstall-Skype.ask" | Out-Null
+ask "Disable voice control" "Harden-VoiceControl.ask" | Out-Null
+ask "Harden Windows Defender" "Harden-WindowsDefender.ask" | Out-Null
+ask "Invert the administrator and guest accounts" "Hardening-AccountRename.ask" | Out-Null
+ask "Deny auto installation of vendor's application/drivers by the user" "Hardening-Co-Installers.ask" | Out-Null
+ask "Do you want to enable 'Credentials Guard' and disable VMWare/VirtualBox" "Hardening-DisableMimikatz__CredentialsGuard.ask" | Out-Null
+ask "Harden domain credential against hijacking ?
+WARNING If this Windows is a mobile laptop, this configuration will break this Windows !!!
+
+Harden domain credential against hijacking" "Hardening-DisableMimikatz__Mimikatz-DomainCredAdv.ask" | Out-Null
+ask "Block DLL from SMB share and WebDav Share" "Hardening-DLLHijacking.ask" | Out-Null
+ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask" | Out-Null
+ask "Show file extension and show windows title in the taskbar" "Optimiz-ClasicExplorerConfig.ask" | Out-Null
+ask "Disable auto Windows Update during work time" "Optimiz-DisableAutoUpdate.ask" | Out-Null
+ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask" | Out-Null
+ask "Replace notepad with notepad++" "Software-install-notepad++.ask" | Out-Null
+$global:asks_cache | Format-Table -Autosize
 logSuccess "All asks have been processed"
 ####################################################################################################
 echo "####################################################################################################"
@@ -321,10 +371,14 @@ echo "# 0.1-AutoUpdate"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "0.1-AutoUpdate" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 0.1-AutoUpdate"
-if( ask "Execute AutoHarden every day at 08h00 AM" "0.1-AutoUpdate.ask" ){
+$q=ask "Execute AutoHarden every day at 08h00 AM" "0.1-AutoUpdate.ask"
+if( $q -eq $true ){
 $ps1TestSign = "${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1"
 if( -not [System.IO.File]::Exists($ps1TestSign) ){
 	$ps1TestSign = "${AutoHarden_Folder}\AutoHarden.ps1"
+}
+if( -not [System.IO.File]::Exists($ps1TestSign) ){
+	$ps1TestSign = $null
 }
 for( $i=3; $i -gt 0; $i-- )
 {
@@ -346,7 +400,7 @@ for( $i=3; $i -gt 0; $i-- )
 		Remove-Item -ErrorAction SilentlyContinue -Force $AutoHardenCert $AutoHardenCertCA
 	}catch{}
 
-	if( (Get-AuthenticodeSignature $ps1TestSign).Status -eq [System.Management.Automation.SignatureStatus]::Valid ){
+	if( $ps1TestSign -ne $null -and (Get-AuthenticodeSignature $ps1TestSign).Status -eq [System.Management.Automation.SignatureStatus]::Valid ){
 		$i=0;
 	}
 }
@@ -370,9 +424,10 @@ if( ask "Auto update AutoHarden every day at 08h00 AM" "0-AutoUpdateFromWeb.ask"
 if( [System.IO.File]::Exists("${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1") -And (Get-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -ErrorAction SilentlyContinue) -ne $null ){
 	Unregister-ScheduledTask -TaskName "AutoHarden" -Confirm:$False -ErrorAction SilentlyContinue
 }
-}
-else{
+
+}elseif($q -eq $false){
 Unregister-ScheduledTask -TaskName "AutoHarden_${AutoHarden_Group}" -Confirm:$False -ErrorAction SilentlyContinue
+
 }
 Write-Progress -Activity AutoHarden -Status "0.1-AutoUpdate" -Completed
 echo "####################################################################################################"
@@ -601,6 +656,7 @@ if( -not (Get-Command New-NetFirewallRule -ErrorAction SilentlyContinue) ){
 		return $ps_js.Serialize($item)
 	}
 }
+
 Write-Progress -Activity AutoHarden -Status "1.0-Firewall-Functions" -Completed
 echo "####################################################################################################"
 echo "# 1.1-Firewall-BasicRules"
@@ -629,13 +685,16 @@ FWRule @{
 }
 # Note about 135/TCP => https://superuser.com/questions/669199/how-to-stop-listening-at-port-135/1012382#1012382
 # Port 135/TCP can be killed in 100% of server and workstation if CreateObject("Excel.Application", RemoteMachine) is not used
+
 Write-Progress -Activity AutoHarden -Status "1.1-Firewall-BasicRules" -Completed
 echo "####################################################################################################"
 echo "# 1.1-Firewall-Malware"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "1.1-Firewall-Malware" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.1-Firewall-Malware"
-if( ask "Block Internet communication for evil tools ? This filtering prevents viruses from downloading the payload." "1.1-Firewall-Malware.ask" ){
+$q=ask "Block Internet communication for evil tools ?
+This filtering prevents viruses from downloading the payload." "1.1-Firewall-Malware.ask"
+if( $q -eq $true ){
 #	blockExe "Windows Defender" "C:\ProgramData\Microsoft\Windows Defender\platform\*\MpCmdRun.exe",# Fixed in the latest version of Defender
 #	https://malware.news/t/a-deep-dive-into-rundll32-exe/43840
 #	blockExe "Rundll32" "C:\Windows\System32\rundll32.exe",
@@ -668,9 +727,10 @@ if( ask "Block Internet communication for evil tools ? This filtering prevents v
 		RemoteAddress=$IPForInternet
 	}
 }
-}
-else{
-Get-NetFirewallRule -Group "AutoHarden-LOLBAS" | Remove-NetFirewallRule
+
+}elseif($q -eq $false){
+Get-NetFirewallRule -Group "AutoHarden-LOLBAS" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
 }
 Write-Progress -Activity AutoHarden -Status "1.1-Firewall-Malware" -Completed
 echo "####################################################################################################"
@@ -678,7 +738,12 @@ echo "# 1.2-Firewall-Office"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "1.2-Firewall-Office" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.2-Firewall-Office"
-if( ask "Block Internet communication for Word and Excel ? Excel and Word will still be able to access files on local network shares. This filtering prevents viruses from downloading the payload.  Block Internet communication for Word and Excel" "1.2-Firewall-Office.ask" ){
+$q=ask "Block Internet communication for Word and Excel ?
+Excel and Word will still be able to access files on local network shares.
+This filtering prevents viruses from downloading the payload.
+
+Block Internet communication for Word and Excel" "1.2-Firewall-Office.ask"
+if( $q -eq $true ){
 @(
 	@{Name='Word'; blockExe=@(
 		"C:\Program Files*\Microsoft Office*\root\*\winword.exe",
@@ -725,9 +790,10 @@ FWRule @{
 	Protocol='tcp'
 	RemotePort=80
 }
-}
-else{
-Get-NetFirewallRule -Group '*AutoHarden*Office*' | Remove-NetFirewallRule
+
+}elseif($q -eq $false){
+Get-NetFirewallRule -Group '*AutoHarden*Office*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
 }
 Write-Progress -Activity AutoHarden -Status "1.2-Firewall-Office" -Completed
 echo "####################################################################################################"
@@ -735,7 +801,12 @@ echo "# 1.3-Firewall-IE"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "1.3-Firewall-IE" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.3-Firewall-IE"
-if( ask "Block Internet communication for 'Internet Explorer' ? 'Internet Explorer' will still be able to access web server on local network. This filtering prevents viruses from downloading the payload.  Block Internet communication for 'Internet Explorer'" "1.3-Firewall-IE.ask" ){
+$q=ask "Block Internet communication for 'Internet Explorer' ?
+'Internet Explorer' will still be able to access web server on local network.
+This filtering prevents viruses from downloading the payload.
+
+Block Internet communication for 'Internet Explorer'" "1.3-Firewall-IE.ask"
+if( $q -eq $true ){
 fwRule @{
 	Name='[Deny Internet] InternetExplorer'
 	Group='InternetExplorer'
@@ -746,9 +817,10 @@ fwRule @{
 	)
 	RemoteAddress=$IPForInternet
 }
-}
-else{
-Get-NetFirewallRule -DisplayName '*AutoHarden*InternetExplorer*' | Remove-NetFirewallRule
+
+}elseif($q -eq $false){
+Get-NetFirewallRule -DisplayName '*AutoHarden*InternetExplorer*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
 }
 Write-Progress -Activity AutoHarden -Status "1.3-Firewall-IE" -Completed
 echo "####################################################################################################"
@@ -778,17 +850,20 @@ testNetshRPCPort 'ipv4' 'udp'
 testNetshRPCPort 'ipv4' 'tcp'
 testNetshRPCPort 'ipv6' 'udp'
 testNetshRPCPort 'ipv6' 'tcp'
+
 Write-Progress -Activity AutoHarden -Status "1.4-Firewall-RPC" -Completed
 echo "####################################################################################################"
 echo "# 1.5-Firewall-DisableNotification"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "1.5-Firewall-DisableNotification" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.5-Firewall-DisableNotification"
-if( ask "Avoid sending notification to Users about the firewall" "1.5-Firewall-DisableNotification.ask" ){
+$q=ask "Avoid sending notification to Users about the firewall" "1.5-Firewall-DisableNotification.ask"
+if( $q -eq $true ){
 Set-NetFirewallProfile -All -Enabled True -NotifyOnListen False
-}
-else{
+
+}elseif($q -eq $false){
 Set-NetFirewallProfile -All -Enabled True -NotifyOnListen True
+
 }
 Write-Progress -Activity AutoHarden -Status "1.5-Firewall-DisableNotification" -Completed
 echo "####################################################################################################"
@@ -809,6 +884,7 @@ if( $getRole -ne 'Domain Controller' ){
 		RemoteAddress=$IPForInternet
 	}
 }
+
 Write-Progress -Activity AutoHarden -Status "1.6-Firewall-AvoidSMBOnInternet" -Completed
 echo "####################################################################################################"
 echo "# 1.6-Firewall-StealtMode"
@@ -826,6 +902,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile"        
 reg add "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile"                               /d $value /v DisableStealthMode /t REG_DWORD /f
 reg add "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile"                                /d $value /v DisableStealthMode /t REG_DWORD /f
 reg add "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile"                              /d $value /v DisableStealthMode /t REG_DWORD /f
+
 Write-Progress -Activity AutoHarden -Status "1.6-Firewall-StealtMode" -Completed
 echo "####################################################################################################"
 echo "# 2-Hardening-ADIDNS"
@@ -834,6 +911,7 @@ Write-Progress -Activity AutoHarden -Status "2-Hardening-ADIDNS" -PercentComplet
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 2-Hardening-ADIDNS"
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DisableReverseAddressRegistrations /d 1 /t REG_DWORD /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DisableDynamicUpdate /d 1 /t REG_DWORD /f
+
 Write-Progress -Activity AutoHarden -Status "2-Hardening-ADIDNS" -Completed
 echo "####################################################################################################"
 echo "# 2-Hardening-HardDriveEncryption"
@@ -854,6 +932,7 @@ try{
 	logError 'C: is not encrypted !'
 }
 # Enable-BitLocker -MountPoint "C:" -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector -RecoveryKeyProtector -RecoveryKeyPath "C:\"
+
 Write-Progress -Activity AutoHarden -Status "2-Hardening-HardDriveEncryption" -Completed
 echo "####################################################################################################"
 echo "# 2-Hardening-Powershell"
@@ -863,6 +942,7 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running 2-Hardening-Pow
 # Disable Powershellv2
 DISM /Online /Disable-Feature:MicrosoftWindowsPowerShellV2Root /NoRestart
 Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart | Out-Null
+
 Write-Progress -Activity AutoHarden -Status "2-Hardening-Powershell" -Completed
 echo "####################################################################################################"
 echo "# 2-Hardening-RPCFiltering"
@@ -898,13 +978,15 @@ $rules += RpcRuleCreator '338cd001-2244-31f1-aaaa-900038001003' 'Remote Registry
 $rules += RpcRuleCreator '12345678-1234-abcd-ef00-0123456789ab' 'Print Spooler'
 
 addRpcAcl -acl $rules
+
 Write-Progress -Activity AutoHarden -Status "2-Hardening-RPCFiltering" -Completed
 echo "####################################################################################################"
 echo "# Crapware-Cortana"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Crapware-Cortana" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Crapware-Cortana"
-if( ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask" ){
+$q=ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask"
+if( $q -eq $true ){
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowCortana /d 0 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowCortana /d 0 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowSearchToUseLocation /d 0 /f
@@ -917,8 +999,8 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /t REG_D
 # https://www.winhelponline.com/blog/disable-web-results-windows-10-start-menu/
 reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer" /t REG_DWORD /v DisableSearchBoxSuggestions /d 1 /f
 Get-appxpackage -allusers *Microsoft.549981C3F5F10* | Remove-AppxPackage
-}
-else{
+
+}elseif($q -eq $false){
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowCortana /d 1 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowCortana /d 1 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /t REG_DWORD /v AllowSearchToUseLocation /d 1 /f
@@ -928,6 +1010,7 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" 
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Search" /t REG_DWORD /v BingSearchEnabled /d 1 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /t REG_DWORD /v PublishUserActivities /d 1 /f
 reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer" /t REG_DWORD /v DisableSearchBoxSuggestions /d 0 /f
+
 }
 Write-Progress -Activity AutoHarden -Status "Crapware-Cortana" -Completed
 echo "####################################################################################################"
@@ -1002,6 +1085,7 @@ reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\office\16.0\common\feedba
 
 
 #https://github.com/crazy-max/WindowsSpyBlocker/raw/master/data/hosts/spy.txt
+
 Write-Progress -Activity AutoHarden -Status "Crapware-DisableTelemetry-and-ADS" -Completed
 echo "####################################################################################################"
 echo "# Crapware-RemoveUseLessSoftware"
@@ -1023,6 +1107,7 @@ Get-AppxPackage *xboxapp* | Remove-AppxPackage
 reg add HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main /v AllowPrelaunch /d 0 /t REG_DWORD /f
 
 # List: Get-AppxPackage
+
 Write-Progress -Activity AutoHarden -Status "Crapware-RemoveUseLessSoftware" -Completed
 echo "####################################################################################################"
 echo "# Crapware-Windows10UpgradeOldFolder"
@@ -1031,6 +1116,7 @@ Write-Progress -Activity AutoHarden -Status "Crapware-Windows10UpgradeOldFolder"
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Crapware-Windows10UpgradeOldFolder"
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\$Windows.~BT' | Out-Null
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\Windows.old' | Out-Null
+
 Write-Progress -Activity AutoHarden -Status "Crapware-Windows10UpgradeOldFolder" -Completed
 echo "####################################################################################################"
 echo "# Fix-CVE-2020-16898"
@@ -1047,6 +1133,7 @@ Get-NetIPInterface -AddressFamily ipv6 | foreach{
 		logInfo 'Already fixed against CVE-2020-16898 - "Bad Neighbor"'
 	}
 }
+
 Write-Progress -Activity AutoHarden -Status "Fix-CVE-2020-16898" -Completed
 echo "####################################################################################################"
 echo "# Fix-HiveNightmare"
@@ -1055,6 +1142,7 @@ Write-Progress -Activity AutoHarden -Status "Fix-HiveNightmare" -PercentComplete
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Fix-HiveNightmare"
 # https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36934
 icacls $env:windir\system32\config\*.* /inheritance:e
+
 Write-Progress -Activity AutoHarden -Status "Fix-HiveNightmare" -Completed
 echo "####################################################################################################"
 echo "# Fix-PetitPotam"
@@ -1097,6 +1185,7 @@ if( $getRole -eq 'Domain Controller' ){
 # From: https://twitter.com/tiraniddo/status/1422223511599284227
 # From: https://gist.github.com/tyranid/5527f5559041023714d67414271ca742
 addRpcAcl -name 'EFS' -uuid @('c681d488-d850-11d0-8c52-00c04fd90f7e', 'df1941c5-fe89-4e79-bf10-463657acf44d')
+
 Write-Progress -Activity AutoHarden -Status "Fix-PetitPotam" -Completed
 echo "####################################################################################################"
 echo "# Harden-Adobe"
@@ -1146,6 +1235,7 @@ Set-ItemProperty "HKCU:\SOFTWARE\Adobe\Acrobat Reader\*\TrustManager" -Name iPro
 # (HKEY_CURRENT_USER\SOFTWARE\Adobe\Acrobat Reader\DC\TrustManager -> bEnhancedSecurityInBrowser = 1 & bEnhancedSecurityStandalone = 1)
 Set-ItemProperty "HKCU:\SOFTWARE\Adobe\Acrobat Reader\*\TrustManager" -Name bEnhancedSecurityInBrowser -Value 1 -errorAction SilentlyContinue
 Set-ItemProperty "HKCU:\SOFTWARE\Adobe\Acrobat Reader\*\TrustManager" -Name bEnhancedSecurityStandalone -Value 1 -errorAction SilentlyContinue
+
 Write-Progress -Activity AutoHarden -Status "Harden-Adobe" -Completed
 echo "####################################################################################################"
 echo "# Harden-DisableShortPath"
@@ -1153,6 +1243,7 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "Harden-DisableShortPath" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-DisableShortPath"
 fsutil.exe 8dot3name set 1
+
 Write-Progress -Activity AutoHarden -Status "Harden-DisableShortPath" -Completed
 echo "####################################################################################################"
 echo "# Harden-Office"
@@ -1200,6 +1291,7 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -
 
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
+
 Write-Progress -Activity AutoHarden -Status "Harden-Office" -Completed
 echo "####################################################################################################"
 echo "# Harden-RDP-Credentials"
@@ -1207,6 +1299,7 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "Harden-RDP-Credentials" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-RDP-Credentials"
 Get-Item "HKCU:\Software\Microsoft\Terminal Server Client\Servers\*" -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse  -ErrorAction SilentlyContinue
+
 Write-Progress -Activity AutoHarden -Status "Harden-RDP-Credentials" -Completed
 echo "####################################################################################################"
 echo "# Harden-VMWareWorkstation"
@@ -1226,21 +1319,24 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-VMWareWo
 		logSuccess "Service >$_< has been disabled"
 	}
 }
+
 Write-Progress -Activity AutoHarden -Status "Harden-VMWareWorkstation" -Completed
 echo "####################################################################################################"
 echo "# Harden-VoiceControl"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Harden-VoiceControl" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-VoiceControl"
-if( ask "Disable voice control" "Harden-VoiceControl.ask" ){
+$q=ask "Disable voice control" "Harden-VoiceControl.ask"
+if( $q -eq $true ){
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /t REG_DWORD /v AgentActivationEnabled /d 0 /f
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /t REG_DWORD /v AgentActivationOnLockScreenEnabled /d 0 /f
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\InputPersonalization" /t REG_DWORD /v AllowInputPersonalization /d 0 /f
-}
-else{
+
+}elseif($q -eq $false){
 reg delete "HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /f
 reg delete "HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationOnLockScreenEnabled /f
 reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\InputPersonalization" /v AllowInputPersonalization /f
+
 }
 Write-Progress -Activity AutoHarden -Status "Harden-VoiceControl" -Completed
 echo "####################################################################################################"
@@ -1248,7 +1344,9 @@ echo "# Harden-WindowsDefender"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Harden-WindowsDefender" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-WindowsDefender"
-if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") -and (ask "Harden Windows Defender" "Harden-WindowsDefender.ask") ){
+$q=ask "Harden Windows Defender" "Harden-WindowsDefender.ask"
+if( $q -eq $true ){
+if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") ){
 	# From https://gist.github.com/decay88/5bd6b2c9ebf681324847e541ba1fb191
 	# From https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-atp/attack-surface-reduction
 	################################################################################################################
@@ -1326,18 +1424,21 @@ if( -not (ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask") -and (ask
 	mywget -Uri https://demo.wd.microsoft.com/Content/ProcessMitigation.xml -OutFile $ProcessMitigation
 	Set-ProcessMitigation -PolicyFilePath $ProcessMitigation
 	rm -Force $ProcessMitigation
-}else{
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 9E6C4E1F-7D60-472F-BA1A-A39EF669E4B2 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids D4F940AB-401B-4EFC-AADC-AD5F3C50688A 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 3B576869-A4EC-4529-8536-B80A7769E899 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 5BEB7EFE-FD9A-4556-801D-275E5FFC04CC 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids D3E037E1-3EB8-44C8-A917-57927947596D 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids 01443614-cd74-433a-b99e-2ecdc07bfc25 2>$null
-	Remove-MpPreference -AttackSurfaceReductionRules_Ids C1DB55AB-C21A-4637-BB3F-A12568109D35 2>$null
-	Set-MpPreference -EnableNetworkProtection Disabled 2>$null
+}
+
+}elseif($q -eq $false){
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 9E6C4E1F-7D60-472F-BA1A-A39EF669E4B2 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids D4F940AB-401B-4EFC-AADC-AD5F3C50688A 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 3B576869-A4EC-4529-8536-B80A7769E899 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 5BEB7EFE-FD9A-4556-801D-275E5FFC04CC 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids D3E037E1-3EB8-44C8-A917-57927947596D 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids 01443614-cd74-433a-b99e-2ecdc07bfc25 2>$null
+Remove-MpPreference -AttackSurfaceReductionRules_Ids C1DB55AB-C21A-4637-BB3F-A12568109D35 2>$null
+Set-MpPreference -EnableNetworkProtection Disabled 2>$null
+
 }
 Write-Progress -Activity AutoHarden -Status "Harden-WindowsDefender" -Completed
 echo "####################################################################################################"
@@ -1357,6 +1458,7 @@ if( [string]::IsNullOrEmpty($autodicover) ){
 	RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 	ipconfig /flushdns
 }
+
 Write-Progress -Activity AutoHarden -Status "Hardening-BlockAutoDiscover" -Completed
 echo "####################################################################################################"
 echo "# Hardening-BlockUntrustedFonts"
@@ -1365,6 +1467,7 @@ Write-Progress -Activity AutoHarden -Status "Hardening-BlockUntrustedFonts" -Per
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-BlockUntrustedFonts"
 # https://adsecurity.org/?p=3299
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MitigationOptions /t REG_QWORD /d 0x2000000000000 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-BlockUntrustedFonts" -Completed
 echo "####################################################################################################"
 echo "# Hardening-CertPaddingCheck"
@@ -1378,14 +1481,17 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-CertP
 #
 reg add "HKEY_LOCAL_MACHINE\Software\Microsoft\Cryptography\Wintrust\Config" /t REG_DWORD /v EnableCertPaddingCheck /d 1 /f
 reg add "HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config" /t REG_DWORD /v EnableCertPaddingCheck /d 1 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-CertPaddingCheck" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Co-Installers"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-Co-Installers" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Co-Installers"
-if( ask "Allow auto installation of vendor's application/drivers by the user" "Hardening-Co-Installers.ask" ){
+$q=ask "Deny auto installation of vendor's application/drivers by the user" "Hardening-Co-Installers.ask"
+if( $q -eq $true ){
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" /t REG_DWORD /v DisableCoInstallers /d 1 /f
+
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-Co-Installers" -Completed
 echo "####################################################################################################"
@@ -1397,6 +1503,7 @@ icacls C:\ /remove:g "NT AUTHORITY\Utilisateurs authentifiés"
 icacls C:\ /remove:g "Utilisateurs authentifiés"
 icacls C:\ /remove:g "NT AUTHORITY\Authenticated Users"
 icacls C:\ /remove:g "Authenticated Users"
+
 Write-Progress -Activity AutoHarden -Status "Hardening-Disable-C-FolderCreation" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableCABlueCoat"
@@ -1446,6 +1553,7 @@ yQSxTBWG6GJjyDY7543ZK3FH4Ctih/nFgXrjuY7Ghrk=
 '@ > $CABlueCoat
 Import-Certificate -Filepath $CABlueCoat -CertStoreLocation Cert:\LocalMachine\Disallowed | out-null
 Remove-Item -Force $CABlueCoat -ErrorAction Ignore
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableCABlueCoat" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableIPv6"
@@ -1482,6 +1590,7 @@ fwRule @{
 # reg add "HKLM\SYSTEM\CurrentControlSet\services\tcpip6\parameters" /v DisabledComponents /t REG_DWORD /d 0xFF /f
 # Netsh int ipv6 set int 12 routerdiscovery=disabled
 # Netsh int ipv6 set int 12 managedaddress=disabled
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableIPv6" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableLLMNR"
@@ -1507,6 +1616,7 @@ fwRule @{
 	Direction='Outbound'
 	Action='Block'
 }
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableLLMNR" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableMimikatz"
@@ -1530,13 +1640,15 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v DisableRest
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 0 /f
 # 2.3.17.1 UAC - Ensure 'User Account Control: Admin Approval Mode for the Built-in Administrator account' is set to 'Enabled'
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v FilterAdministratorToken /t REG_DWORD /d 1 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableMimikatz__CredentialsGuard"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz__CredentialsGuard" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DisableMimikatz__CredentialsGuard"
-if( ask "Do you want to enable 'Credentials Guard' and disable VMWare/VirtualBox" "Hardening-DisableMimikatz__CredentialsGuard.ask" ){
+$q=ask "Do you want to enable 'Credentials Guard' and disable VMWare/VirtualBox" "Hardening-DisableMimikatz__CredentialsGuard.ask"
+if( $q -eq $true ){
 if( (Get-Item "C:\Program Files*\VMware\*\vmnat.exe") -eq $null ){
 	# Credentials Guard
 	reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v LsaCfgFlags /t REG_DWORD /d 1 /f
@@ -1546,10 +1658,11 @@ if( (Get-Item "C:\Program Files*\VMware\*\vmnat.exe") -eq $null ){
 	# cf https://stackoverflow.com/questions/39858200/vmware-workstation-and-device-credential-guard-are-not-compatible
 	# cf https://www.microsoft.com/en-us/download/details.aspx?id=53337
 }
-}
-else{
+
+}elseif($q -eq $false){
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v LsaCfgFlags /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\LSA" /v LsaCfgFlagsDefault /t REG_DWORD /d 0 /f
+
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz__CredentialsGuard" -Completed
 echo "####################################################################################################"
@@ -1598,6 +1711,7 @@ Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interf
 
 wmic /interactive:off nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
 wmic /interactive:off nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableNetbios" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableRemoteServiceManagement"
@@ -1619,6 +1733,7 @@ if( -not $tmp.Contains("(D;;GA;;;NU)") -and -not $tmp.Contains("(D;;KA;;;NU)") )
 addRpcAcl -name 'SCManager' -uuid '367abb81-9844-35f1-ad32-98f038001003'
 # https://twitter.com/tiraniddo/status/1429525321414369281?s=20
 addRpcAcl -name 'WMI' -uuid '8bc3f05e-d86b-11d0-a075-00c04fb68820'
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableRemoteServiceManagement" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableSMBServer"
@@ -1637,6 +1752,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\LanmanWorkstation" /v AllowIns
 #Get-SmbServerConfiguration
 
 sc.exe config lanmanserver start= disabled
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableSMBServer" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableWPAD"
@@ -1662,6 +1778,7 @@ $_wpad=Select-String -Path C:\Windows\System32\drivers\etc\hosts -Pattern "0.0.0
 if( [string]::IsNullOrEmpty($_wpad) ){
 	[System.IO.File]::AppendAllText("C:\Windows\System32\drivers\etc\hosts", "`r`n# [AutoHarden] Block WPAD`r`n0.0.0.0 ProxySrv", (New-Object System.Text.UTF8Encoding $False)) | Out-Null
 }
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableWPAD" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DNSCache"
@@ -1670,6 +1787,7 @@ Write-Progress -Activity AutoHarden -Status "Hardening-DNSCache" -PercentComplet
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DNSCache"
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCacheTtl /t REG_DWORD /d 10 /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxNegativeCacheTtl /t REG_DWORD /d 10 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DNSCache" -Completed
 echo "####################################################################################################"
 echo "# Hardening-FileExtension"
@@ -1711,21 +1829,22 @@ cmd /c ftype Microsoft.PowerShellXMLData.1="C:\Windows\notepad.exe" "%1"
 cmd /c ftype Microsoft.PowerShellConsole.1="C:\Windows\notepad.exe" "%1"
 # .xml
 cmd /c ftype "XML Script Engine"="C:\Windows\notepad.exe" "%1"
-ftype sctfile="%systemroot%\system32\notepad.exe" "%1"
-ftype urlfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype sctfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype urlfile="%systemroot%\system32\notepad.exe" "%1"
 # https://www.trustwave.com/Resources/SpiderLabs-Blog/Firework--Leveraging-Microsoft-Workspaces-in-a-Penetration-Test/
-ftype wcxfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype wcxfile="%systemroot%\system32\notepad.exe" "%1"
 # https://bohops.com/2018/08/18/abusing-the-com-registry-structure-part-2-loading-techniques-for-evasion-and-persistence/
 #ftype mscfile="%systemroot%\system32\notepad.exe" "%1"
 
 # https://rinseandrepeatanalysis.blogspot.com/2018/09/dde-downloaders-excel-abuse-and.html
-ftype slkfile="%systemroot%\system32\notepad.exe" "%1"
-ftype iqyfile="%systemroot%\system32\notepad.exe" "%1"
-ftype prnfile="%systemroot%\system32\notepad.exe" "%1"
-ftype diffile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype slkfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype iqyfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype prnfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype diffile="%systemroot%\system32\notepad.exe" "%1"
 
 # CVE-2020-0765 impacting Remote Desktop Connection Manager (RDCMan) configuration files - MS won't fix
-ftype rdgfile="%systemroot%\system32\notepad.exe" "%1"
+cmd /c ftype rdgfile="%systemroot%\system32\notepad.exe" "%1"
+
 Write-Progress -Activity AutoHarden -Status "Hardening-FileExtension" -Completed
 echo "####################################################################################################"
 echo "# Hardening-LDAP"
@@ -1751,6 +1870,7 @@ reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v RequireS
 reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v SealSecureChannel /t REG_DWORD /d 1 /f
 # Ensure 'Domain member: Digitally sign secure channel data (when possible)' is set to 'Enabled'
 reg add "HKLM\System\CurrentControlSet\Services\Netlogon\Parameters" /v SignSecureChannel /t REG_DWORD /d 1 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-LDAP" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Navigator"
@@ -1771,17 +1891,20 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Navig
 reg add HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome /v EnableMediaRouter /d 1 /f
 reg add HKEY_LOCAL_MACHINE\Software\Policies\BraveSoftware\Brave /v EnableMediaRouter /d 1 /f
 reg add HKEY_LOCAL_MACHINE\Software\Policies\Chromium /v EnableMediaRouter /d 1 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-Navigator" -Completed
 echo "####################################################################################################"
 echo "# Hardening-RemoteAssistance"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-RemoteAssistance" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-RemoteAssistance"
-if( ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask" ){
+$q=ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask"
+if( $q -eq $true ){
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Remote Assistance" /t REG_DWORD /v fAllowToGetHelp /d 0 /f
-}
-else{
+
+}elseif($q -eq $false){
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowToGetHelp /f
+
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-RemoteAssistance" -Completed
 echo "####################################################################################################"
@@ -1797,6 +1920,7 @@ reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v EnableSecurit
 reg add "HKLM\System\CurrentControlSet\Services\Rdr\Parameters" /v RequireSecuritySignature /t REG_DWORD /d 1 /f
 
 powershell.exe Disable-WindowsOptionalFeature -Online -FeatureName smb1protocol
+
 Write-Progress -Activity AutoHarden -Status "Hardening-SMB" -Completed
 echo "####################################################################################################"
 echo "# Hardening-UAC"
@@ -1806,6 +1930,7 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-UAC"
 # Enable UAC
 # This key is called EnableLUA because User Access Control was previously called Limited User Account (LUA).
 reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /t REG_DWORD /v EnableLUA /d 1 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-UAC" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Wifi-RemoveOpenProfile"
@@ -1823,6 +1948,7 @@ Get-Item C:\Windows\temp\Wi-Fi-*.xml | foreach {
 	}
 }
 Remove-Item C:\Windows\temp\Wi-Fi-*.xml | Out-Null
+
 Write-Progress -Activity AutoHarden -Status "Hardening-Wifi-RemoveOpenProfile" -Completed
 echo "####################################################################################################"
 echo "# Hardening-Wifi"
@@ -1833,6 +1959,7 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /t REG_D
 
 # WiFi Sense: Shared HotSpot Auto-Connect: Disable
 reg add "HKEY_LOCAL_MACHINE\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" /t REG_DWORD /v value /d 0 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-Wifi" -Completed
 echo "####################################################################################################"
 echo "# Log-Activity"
@@ -2010,6 +2137,7 @@ auditpol /set /subcategory:"{0CCE9240-69AE-11D9-BED3-505054503030}" /success:ena
 auditpol /set /subcategory:"{0CCE9241-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
 #   Service d’authentification Kerberos,{0CCE9242-69AE-11D9-BED3-505054503030}
 auditpol /set /subcategory:"{0CCE9242-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
+
 Write-Progress -Activity AutoHarden -Status "Log-Activity" -Completed
 echo "####################################################################################################"
 echo "# Optimiz-CleanUpWindowFolder"
@@ -2024,6 +2152,7 @@ Dism.exe /online /Cleanup-Image /StartComponentCleanup
 # Réparation des DLL et drivers
 DISM /Online /Cleanup-image /Restorehealth
 sfc /SCANNOW
+
 Write-Progress -Activity AutoHarden -Status "Optimiz-CleanUpWindowFolder" -Completed
 echo "####################################################################################################"
 echo "# Optimiz-CleanUpWindowsName"
@@ -2058,6 +2187,7 @@ function killfakename( $file ){
 killfakename 'C:\Users\desktop.ini'
 killfakename 'C:\Program Files\desktop.ini'
 killfakename 'C:\Program Files (x86)\desktop.ini'
+
 Write-Progress -Activity AutoHarden -Status "Optimiz-CleanUpWindowsName" -Completed
 echo "####################################################################################################"
 echo "# Optimiz-cmd-color"
@@ -2066,6 +2196,7 @@ Write-Progress -Activity AutoHarden -Status "Optimiz-cmd-color" -PercentComplete
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Optimiz-cmd-color"
 # https://ss64.com/nt/syntax-ansi.html
 reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /d 1 /t REG_DWORD /f
+
 Write-Progress -Activity AutoHarden -Status "Optimiz-cmd-color" -Completed
 echo "####################################################################################################"
 echo "# Software-install-1-Functions"
@@ -2101,6 +2232,7 @@ function chocoInstall( $pk )
 }
 $global:chocoList = & choco list -localonly
 choco upgrade all -y
+
 Write-Progress -Activity AutoHarden -Status "Software-install-1-Functions" -Completed
 echo "####################################################################################################"
 echo "# Software-install-2-GlobalPackages"
@@ -2113,6 +2245,7 @@ chocoInstall greenshot
 chocoInstall vlc
 chocoInstall sysinternals
 chocoInstall keepassxc
+
 Write-Progress -Activity AutoHarden -Status "Software-install-2-GlobalPackages" -Completed
 echo "####################################################################################################"
 echo "# Software-install-Logs"
@@ -2145,13 +2278,15 @@ if( Get-Command autorunsc -errorAction SilentlyContinue ){
 		}
 	}
 }
+
 Write-Progress -Activity AutoHarden -Status "Software-install-Logs" -Completed
 echo "####################################################################################################"
 echo "# Software-install-notepad++"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Software-install-notepad++" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Software-install-notepad++"
-if( ask "Replace notepad with notepad++" "Software-install-notepad++.ask" ){
+$q=ask "Replace notepad with notepad++" "Software-install-notepad++.ask"
+if( $q -eq $true ){
 chocoInstall notepadplusplus.install
 $npp_path=(Get-Item "C:\Program Files*\Notepad++\notepad++.exe").FullName.Replace('.exe','.vbs')
 @'
@@ -2194,14 +2329,15 @@ if( [System.IO.File]::Exists($npp_path) ){
 	$val=('wscript.exe "'+$npp_path+'"')
 	reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe" /v Debugger /t REG_SZ /d $val /f
 }
-}
-else{
+
+}elseif($q -eq $false){
 $npp_path=(Get-Item "C:\Program Files*\Notepad++\notepad++.exe")
 if( $npp_path -ne $null ){
 	$npp_path = $npp_path.FullName.Replace('.exe','.vbs')
 	rm $npp_path
 	reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe" /f
 }
+
 }
 Write-Progress -Activity AutoHarden -Status "Software-install-notepad++" -Completed
 echo "####################################################################################################"
@@ -2210,6 +2346,7 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "ZZZ-10.Asks-Cleanup" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running ZZZ-10.Asks-Cleanup"
 Remove-Item -Force -ErrorAction SilentlyContinue $AutoHarden_Folder\*.ask
+
 Write-Progress -Activity AutoHarden -Status "ZZZ-10.Asks-Cleanup" -Completed
 echo "####################################################################################################"
 echo "# ZZZ-20.Firewall-Cleanup"
@@ -2244,7 +2381,13 @@ Get-NetFirewallProfile | foreach {
 	}
 	$_
 } | Set-NetFirewallProfile -Enabled True -DefaultOutboundAction Allow -DefaultInboundAction Block -AllowInboundRules True -AllowLocalFirewallRules True -AllowLocalIPsecRules True -AllowUnicastResponseToMulticast True -LogAllowed True -LogBlocked True -LogIgnored True -LogFileName "%windir%\system32\logfiles\firewall\pfirewall.log" -LogMaxSizeKilobytes 32767
+
 Write-Progress -Activity AutoHarden -Status "ZZZ-20.Firewall-Cleanup" -Completed
+echo "####################################################################################################"
+echo "# ZZZ-30.__END__"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running ZZZ-30.__END__"
 ###############################################################################
 # Cleaning the script...
 ###############################################################################
@@ -2256,11 +2399,14 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 	Remove-Item -Force $AutoHardenTransScriptLog
 }
 
+Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
+
+
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUwoO0ekJD9quEaZwOjpy+wXuV
-# Uxigggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUEyG86nx7+360BJI3cL7ZAFSe
+# ry6gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2318,16 +2464,16 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFOfAVlLqtLzq7YQw/DIDiSAigCJcMA0GCSqGSIb3DQEBAQUA
-# BIICACjHzP9pMgbM7Q8n3RpQ3FmU+Qs6NxZr4yfEWfb2Y8LSwh00DmLgYabTup7B
-# ITtbTxtgnCtx8J9HNnennz+fc7sn/aApsXDPa5x7l+JpwxpkgbVUdd0nADHvuRhl
-# JaymodGNhQ/DXLRQfLxloqmi7GrKa5pODvAuHG/rLnzzu5hQD5ZcRIm4FiXcikqm
-# a9OKjLI5aOJjaOHeR3XUeaQsv6cCizF8iC6bmqHRFyhxG5aZirsXNG9I6XBtKMyQ
-# ytePFooaI5vjMFX/xwuezQz3Nn84OLJtDkKS7wT66dNH3xx+52KDT6KCaRjFte2y
-# 9gBmSOiBgEPSPY0aClifiJAfWB0UxfgUGYILytLChl2mBPB/FcxaNcCvdn96HGrm
-# 7dgd8N0is3AGcDzFBrEypMn9F6RkoqdMPXWihNhoOukyK80mLHqpFkkiGGsf7c3y
-# dhpUZIqXYGD5iHiWFdrmOOCnQbCcQsOcdB23f/A3RuQZYzRr4Dv9oRhaavCzHUpO
-# hV7fVgSE/ezARLjZdMGJ2xIwvO2jAauaiEE0eWXuOI+vB6Sq2shG5WQIDSkwU2IT
-# ndiEPnH+pK1lXtHpoUPi5d33IVid/dxAjqGxoQ+ivuCJ8c2EsRx57C9O278MA/Ka
-# 1cNyBcQ6yv5k3qWYCBGK9NQvV3fXb861hwETKICEQ2jDqT+L
+# KoZIhvcNAQkEMRYEFFx3bFeuOhoBQnToLVH/FZKvI6IlMA0GCSqGSIb3DQEBAQUA
+# BIICAGnSJq5Fk4ATZvBAWMTbrnLnFsSjEUSLYVviQ1UKXUhsGoDmpzUAPKIX1NFj
+# HB/mB8ANyke8bHlchcT8XwPyUz/DNjxqw5JtFjxTsP8B8fJo5WXPOrRe5Ia+Qp18
+# zUst9byVUXzwlVXFH3G807oKQ6JL4/GlRFQ9x107dHcwl7JFT9YRT/kUYNXVYSY+
+# a3iewZbQL04yXGU1cNyE9q2C+L9noJAc3UZSHu9cLXUXQ3SwxxnuN54p2EsqNo0K
+# 6jw/dR4c5aApTfz3mCWLUw3v/k8f/TRTU3TJn4dKMUSic0b8TLv1CFDwjL1M4Pjn
+# UeirvaIdDbG0IHg/8naEcQlgH1d9WU5+qbthpnAQ+LOA9NqeRbXIHh5yqgpm7/Qi
+# ueHfziQqhFdofWL60yzHCqUNKIq25/ClATUq9jktgzcTkoICeS23WZnhGKsMPjtR
+# LiCPMWZXMlVPoOFtcd3lJTLr/LunMBEpadXQ8CZJwvQ/tC6A6Q6CoFp/cRjQeQU1
+# xKhPDb8pvxxNIaNgOAS6qEh7WsRss5ZqWHPxOnLewxpxRtcxKIVHlhCy+Sgw16oB
+# wWod1AnXO/OZqnSvYbLZxQzbICOZjKGds5G0sPKf3yWCSdE10zRWfjsT/K7S/Iop
+# m3FIT0LbBKekggyNn6BKs6R5NcBP9HDad4obPni0ODjMmd9d
 # SIG # End signature block

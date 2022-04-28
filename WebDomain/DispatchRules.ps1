@@ -58,6 +58,23 @@ $rules = @"
 		'Hardening-DLLHijacking',
 		'Optimiz-DisableAutoReboot'
 	],
+	'Corp-Workstations-LightST': [
+		'1.4-Firewall-BlockOutgoingSNMP',
+		'1.2-Firewall-Office',
+		'1.3-Firewall-IE',
+		'Crapware-Onedrive',		
+		'Crapware-RemoveUseLessSoftware__Uninstall-OneNote',
+		'Crapware-RemoveUseLessSoftware__Uninstall-Skype',
+		'Hardening-AccountRename',
+		'Hardening-DisableMimikatz__Mimikatz-DomainCredAdv',
+		'Hardening-DisableMimikatz__CredentialsGuard',
+		'Optimiz-ClasicExplorerConfig',
+		'Optimiz-DisableAutoUpdate',
+		'Optimiz-DisableDefender',		
+		'Hardening-DLLHijacking',
+		'Software-install-notepad++',
+		'Harden-RDP-Credentials'
+	],
 	'Corp-Servers': [
 		$servers
 	],
@@ -88,13 +105,21 @@ Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 			if( -not ($rules."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
 				logInfo "Create $tragetFolder\$ps1Rule"
 				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
-			}else{
-				logError "Ignore $tragetFolder\$ps1Rule"
-				Remove-Item $tragetFolder\$ps1Rule -ErrorAction SilentlyContinue | Out-Null
 			}
 		}
 	}
 }
+
+Write-Host "Applying exception..."
+$rules.PSObject.Properties | foreach {
+	$webdomain=$_.Name
+	Write-Host "Applying exception on $webdomain"
+	$_.Value | foreach {
+		logError "Ignore $MyDir\$webdomain\$_"
+		Remove-Item $MyDir\$webdomain\${_}.* -ErrorAction SilentlyContinue | Out-Null
+	}
+}
+
 $symLinkList.ToString() | Out-File -Encoding UTF8 "$MyDir\.gitignore"
 Write-Host "All link established"
 $host.SetShouldExit(0)

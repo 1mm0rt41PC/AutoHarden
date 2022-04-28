@@ -1,1 +1,1 @@
-Get-NetFirewallRule -DisplayName '*AutoHarden*SNMP*' | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName '*AutoHarden*SNMP*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule

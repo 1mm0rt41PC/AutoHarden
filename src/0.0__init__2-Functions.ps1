@@ -1,16 +1,25 @@
 ###############################################################################
 # FUNCTIONS - Global
+$global:asks_cache = @{}
+
 function ask( $query, $config )
 {
+	if( $global:asks_cache.ContainsKey($config) ){
+		Write-Host ("# [${AutoHarden_AsksFolder}\${config}] In cache => {0}" -f $global:asks_cache[$config])
+		return $global:asks_cache[$config];
+	}
 	if( [System.IO.File]::Exists("${AutoHarden_AsksFolder}\${config}") ){
 		Write-Host "# [${AutoHarden_AsksFolder}\${config}] Exist => Using the new file location"
-		return _ask $query $config $AutoHarden_AsksFolder
+		$ret = _ask $query $config $AutoHarden_AsksFolder
+		$global:asks_cache[$config] = $ret
+		return $ret;
 	}
 	if( [System.IO.File]::Exists("${AutoHarden_Folder}\${config}") ){
 		Write-Host "# [${AutoHarden_Folder}\${config}] The new 'ask' location doesn't exist but the old one exist => Using the old file location"
 		$ret = _ask $query $config $AutoHarden_Folder
 		[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}", "$ret", (New-Object System.Text.UTF8Encoding $False));
 		Remove-Item -Force "${AutoHarden_Folder}\${config}" -ErrorAction Ignore;
+		$global:asks_cache[$config] = $ret
 		return $ret;
 	}
 	if( $askMigration.Contains($config) ){
@@ -26,11 +35,14 @@ function ask( $query, $config )
 			Write-Host ("# [${AutoHarden_AsksFolder}\${config}] Not found but the old configuration exist ${AutoHarden_Folder}\$($askMigration[$config]) with the value ${ret} => {0}" -f ($ret -eq 'Yes'))
 			[System.IO.File]::WriteAllLines("${AutoHarden_AsksFolder}\${config}","$ret", (New-Object System.Text.UTF8Encoding $False));
 			Remove-Item -Force $AutoHarden_Folder\$askMigration[$config] -ErrorAction Ignore;
-			return $ret -eq 'Yes';
+			$global:asks_cache[$config] = $ret -eq 'Yes'
+			return $global:asks_cache[$config];
 		}
 	}
 	Write-Host "# [${AutoHarden_AsksFolder}\${config}] This parameter is new and doesn't exist at all"
-	return _ask $query $config $AutoHarden_AsksFolder
+	$ret = _ask $query $config $AutoHarden_AsksFolder
+	$global:asks_cache[$config] = $ret
+	return $ret;
 }
 
 
@@ -48,7 +60,12 @@ function _ask( $query, $config, $folder )
 				}
 				Write-Host ""
 				do{
-					$ret = (Read-Host "${query}? (Y/n)").substring(0,1).toupper()
+					$ret = (Read-Host "${query}? (Y/n)").toupper()
+					if( $ret.Length -gt 0 ){
+						$ret = $ret.substring(0,1)
+					}else{
+						$ret = 'Y'
+					}
 				}while( $ret -ne 'Y' -and $ret -ne 'N' -and $ret -ne '' );
 				if( $ret -eq 'Y' ){
 					$ret = 'Yes'
@@ -68,9 +85,9 @@ function _ask( $query, $config, $folder )
 		logError "[${folder}\${config}][WARN] An update of AutoHarden require an action from the administrator."
 		if( $global:AutoHarden_boradcastMsg -And $AutoHarden_Asks ) {
 			$global:AutoHarden_boradcastMsg=$false
-			msg * "An update of AutoHarden require an action from the administrator. Please run ${AutoHarden_Folder}\AutoHarden.ps1"
+			msg * "An update of AutoHarden require an action from the administrator.`r`n`r`n${query}?`r`nPlease run ${AutoHarden_Folder}\AutoHarden.ps1"
 		}
-		return $false;
+		return $null;
 	}
 }
 
@@ -135,7 +152,7 @@ function reg()
 function mywget( $Uri, $OutFile=$null )
 {
 	$ret = $null
-	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' | Disable-NetFirewallRule
+	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' -ErrorAction SilentlyContinue | Disable-NetFirewallRule
 	try{
 		if( $OutFile -eq $null ){
 			$ret=Invoke-WebRequest -UseBasicParsing -Uri $Uri
@@ -150,6 +167,6 @@ function mywget( $Uri, $OutFile=$null )
 		}
 
 	}
-	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' | Enable-NetFirewallRule
+	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' -ErrorAction SilentlyContinue | Enable-NetFirewallRule
 	return $ret;
 }

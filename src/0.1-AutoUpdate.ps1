@@ -2,6 +2,9 @@ $ps1TestSign = "${AutoHarden_Folder}\AutoHarden_${AutoHarden_Group}.ps1"
 if( -not [System.IO.File]::Exists($ps1TestSign) ){
 	$ps1TestSign = "${AutoHarden_Folder}\AutoHarden.ps1"
 }
+if( -not [System.IO.File]::Exists($ps1TestSign) ){
+	$ps1TestSign = $null
+}
 for( $i=3; $i -gt 0; $i-- )
 {
 	# Install cert to avoid git takeover
@@ -22,7 +25,7 @@ for( $i=3; $i -gt 0; $i-- )
 		Remove-Item -ErrorAction SilentlyContinue -Force $AutoHardenCert $AutoHardenCertCA
 	}catch{}
 
-	if( (Get-AuthenticodeSignature $ps1TestSign).Status -eq [System.Management.Automation.SignatureStatus]::Valid ){
+	if( $ps1TestSign -ne $null -and (Get-AuthenticodeSignature $ps1TestSign).Status -eq [System.Management.Automation.SignatureStatus]::Valid ){
 		$i=0;
 	}
 }

@@ -46,72 +46,64 @@ if( $RefreshRules ){
 	sudo powershell -exec bypass -Nop -Command "& $MyDir\WebDomain\DispatchRules.ps1"
 }
 
+$global:buff = ''
+function toBuff( $data )
+{
+	$global:buff += $data + "`r`n"
+}
 
 Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 	$AutoHarden_Group = $_.Name
 	$WebDomainPath=$_.FullName
+	$global:buff = ''
 	$outps1 = "AutoHarden_${AutoHarden_Group}.ps1"
-	echo '####################################################################################################'
-	echo $AutoHarden_Group
-	echo '####################################################################################################'
+	Write-Host '####################################################################################################'
+	Write-Host $AutoHarden_Group
+	Write-Host '####################################################################################################'
+
+	Write-Host '[i] Reading init files'
+	Get-ChildItem $WebDomainPath\*__init__*.ps1 | foreach {
+		toBuff (cat $_.FullName | out-string)
+	}
+
+	Write-Host '[i] Reading asks files'
+	toBuff '####################################################################################################'
+	toBuff 'logInfo "Asking questions for the configuration"'
+	Get-ChildItem ${PSScriptRoot}\src\*.ask | foreach {
+		toBuff ('ask "'+(cat $_.FullName | out-string).Trim().Replace('"',"'")+'" "'+$_.Name+'" | Out-Null')
+	}
+	toBuff '$global:asks_cache | Format-Table -Autosize'
+	toBuff 'logSuccess "All asks have been processed"'
+	toBuff '####################################################################################################'
 	
-	$insertAllAsks = $true
-	$data = (Get-ChildItem $WebDomainPath\*.ps1 | foreach {
-		Write-Host $_.FullName
-		if( -not $_.FullName.Contains('__init__')  -And -not $_.FullName.Contains('__END__') ){
-			if( $insertAllAsks ){
-				# Get a list of all ASK
-				echo '####################################################################################################'
-				echo 'logInfo "Asking questions for the configuration"'
-				Get-ChildItem $WebDomainPath\*.ps1 | foreach {
-					if( [System.IO.File]::Exists($_.FullName.Replace('.ps1','.ask')) ){
-						Get-ChildItem $_.FullName.Replace('.ps1','.ask')
-					}elseif( -Not [string]::IsNullOrEmpty($_.Target) -And [System.IO.File]::Exists($_.Target.Replace('.ps1','.ask')) ){
-						Get-ChildItem $_.Target.Replace('.ps1','.ask')
-					}
-				} | foreach {
-					echo ('ask "'+(cat $_.FullName.Replace('.ps1','.ask')).Replace('"',"'")+'" "'+($_.Name.Replace('.ps1','.ask'))+'"')
-				}
-				echo 'logSuccess "All asks have been processed"'
-				echo '####################################################################################################'
-				$insertAllAsks = $false
-			}
+	Write-Host "[i] Reading all other $WebDomainPath\*.ps1 files"
+	Get-ChildItem $WebDomainPath\*.ps1 | where { -not $_.FullName.Contains('__init__') } | foreach {
+		Write-Host ('	[i] Reading '+$_.Name)
+		toBuff 'echo "####################################################################################################"'
+		toBuff ('echo "# '+$_.Name.Replace('.ps1','')+'"')
+		toBuff 'echo "####################################################################################################"'
+		toBuff ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -PercentComplete 0')
+		toBuff ('Write-Host -BackgroundColor Blue -ForegroundColor White "Running '+$_.Name.Replace('.ps1','')+'"')
+		
+		$f = "{0}\src\{1}" -f $PSScriptRoot,$_.Name.Replace('.ps1','.ask')
+		if( [System.IO.File]::Exists($f) ){
+			toBuff ('$q=ask "'+(cat $f | out-string).Trim().Replace('"',"'")+'" "'+($_.Name.Replace('.ps1','.ask'))+'"')
+			toBuff 'if( $q -eq $true ){'
+			toBuff (cat $_.FullName | out-string)
 			
-			
-			echo 'echo "####################################################################################################"'
-			echo ('echo "# '+$_.Name.Replace('.ps1','')+'"')
-			echo 'echo "####################################################################################################"'
-			echo ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -PercentComplete 0')
-			echo ('Write-Host -BackgroundColor Blue -ForegroundColor White "Running '+$_.Name.Replace('.ps1','')+'"')
-		}
-		$isAsk=$false
-		if( [System.IO.File]::Exists($_.FullName.Replace('.ps1','.ask')) ){
-			echo ('if( ask "'+(cat $_.FullName.Replace('.ps1','.ask')).Replace('"',"'")+'" "'+($_.Name.Replace('.ps1','.ask'))+'" ){')
-			$isAsk=$true
-		}elseif( -Not [string]::IsNullOrEmpty($_.Target) -And [System.IO.File]::Exists($_.Target.Replace('.ps1','.ask')) ){
-			echo ('if( ask "'+(cat $_.Target.Replace('.ps1','.ask')).Replace('"',"'")+'" "'+(Get-ChildItem $_.Target).Name.Replace('.ps1','.ask')+'" ){')
-			$isAsk=$true
-		}
-		cat $_.FullName
-		if( $isAsk ){
-			echo '}'
-		}
-		if( $isAsk ){
-			if( [System.IO.File]::Exists($_.FullName.Replace('.ps1','.rollback')) ){
-				echo 'else{'
-				cat $_.FullName.Replace('.ps1','.rollback')
-				echo '}'
-			}elseif( -Not [string]::IsNullOrEmpty($_.Target) -And [System.IO.File]::Exists($_.Target.Replace('.ps1','.rollback')) ){
-				echo 'else{'
-				cat $_.Target.Replace('.ps1','.rollback')
-				echo '}'
+			$f = "{0}\src\{1}" -f $PSScriptRoot,$_.Name.Replace('.ps1','.rollback')
+			if( [System.IO.File]::Exists($f) ){
+				toBuff '}elseif($q -eq $false){'
+				toBuff (cat $f | out-string)
 			}
+			toBuff '}'
+		}else{
+			toBuff (cat $_.FullName | out-string)
 		}
-		if( -not $_.FullName.Contains('__init__') -And -not $_.FullName.Contains('__END__') ){
-			echo ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -Completed')
-		}
-	}).Replace('&{AutoHarden_ScriptName}',$outps1).Replace('&{AutoHardenCert}',$AutoHardenCert).Replace('&{AutoHardenCertCA}', $AutoHardenCertCA).Replace('&{date}',$date).Replace('&{AutoHarden_Group}',$AutoHarden_Group)
-	
+		toBuff ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -Completed')
+	}
+	$data = $global:buff.Replace('&{AutoHarden_ScriptName}',$outps1).Replace('&{AutoHardenCert}',$AutoHardenCert).Replace('&{AutoHardenCertCA}', $AutoHardenCertCA).Replace('&{date}',$date).Replace('&{AutoHarden_Group}',$AutoHarden_Group)
+
 	[System.IO.File]::WriteAllLines("$MyDir\tmp\$outps1", $data, $utf8);
 
 	if( Set-AuthenticodeSignature -filepath "$MyDir\tmp\$outps1" -cert $cert -IncludeChain All ){

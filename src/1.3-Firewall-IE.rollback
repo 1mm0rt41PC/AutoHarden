@@ -1,1 +1,1 @@
-Get-NetFirewallRule -DisplayName '*AutoHarden*InternetExplorer*' | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName '*AutoHarden*InternetExplorer*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
