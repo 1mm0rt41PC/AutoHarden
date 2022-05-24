@@ -57,7 +57,7 @@ function FWRule( $param )
 		#Write-Host "Applying blockExe"
 		$blockExe = $param['blockExe']
 		$param.remove('blockExe')
-		$blockExe | get-item -ErrorAction Continue | foreach {
+		$blockExe | Get-Item -ErrorAction Continue | foreach {
 			$opt = $param.clone()
 			$opt['Program'] = $_.Fullname
 			$opt['Name'] = ('{0} - {1}' -f $opt['Name'], $opt['Program'])
@@ -80,11 +80,23 @@ function FWRule( $param )
 	if( $param.ContainsKey('Group') -and $param['Group'] -ne '' ){
 		$param['Group'] = ('AutoHarden-{0}' -f $param['Group'])
 	}
-	$param.remove('Name');
-	Write-Host ("Create new FW rule: {0}" -f ($param | ConvertTo-Json))
-	New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue | Out-Null
+	$param['Name'] = ('[AutoHarden-{0}][{1}] {2}' -f $AutoHarden_version,$param['Direction'],$param['Name'])
+	if( $param.ContainsKey('RemotePort') ){
+		$param['Name'] += (' '+$param['RemotePort'])
+	}
+	if( $param.ContainsKey('LocalPort') ){
+		$param['Name'] += (' '+$param['LocalPort'])
+	}
+	if( $param.ContainsKey('Protocol') ){
+		$param['Name'] += (' /'+$param['Protocol'])
+	}
+	if( (Get-NetFirewallRule -Group $param['Group'] -ErrorAction Ignore | where {$_.Name -eq $param['Name']}).Count -eq 0 ){
+		logInfo ("Create new FW rule: {0}" -f ($param | ConvertTo-Json))
+		New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue | Out-Null
+	}else{
+		logSuccess ("FW rule is in place: {0}" -f ($param | ConvertTo-Json))
+	}
 }
-
 
 ###############################################################################
 # Remove invalid or old rule

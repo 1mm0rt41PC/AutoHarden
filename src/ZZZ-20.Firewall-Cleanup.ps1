@@ -6,6 +6,9 @@ Get-NetFirewallRule -DisplayName '*AutoHarden*' | Enable-NetFirewallRule
 logInfo 'Remove all rules that are not tagged'
 FWRemoveBadRules
 
+# Enable all rules
+Enable-NetFirewallRule -Name '*'
+
 try{
 	mkdir -Force $env:windir\system32\logfiles\firewall | Out-Null
 }catch{}
