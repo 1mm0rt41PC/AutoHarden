@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-05-24-17-07-03
-$AutoHarden_version="2022-05-24-17-07-03"
+# Update: 2022-06-01-01-36-12
+$AutoHarden_version="2022-06-01-01-36-12"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1237,6 +1237,16 @@ Get-NetIPInterface -AddressFamily ipv6 | foreach{
 }
 
 Write-Progress -Activity AutoHarden -Status "Fix-CVE-2020-16898" -Completed
+echo "####################################################################################################"
+echo "# Fix-CVE-2022-30910-Follina"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Fix-CVE-2022-30910-Follina" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Fix-CVE-2022-30910-Follina"
+# https://twitter.com/gentilkiwi/status/1531384447219781634
+# https://twitter.com/MalwareJake/status/1531427953967607810
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\ScriptedDiagnostics" /t REG_DWORD /v EnableDiagnostics /d 0 /f
+
+Write-Progress -Activity AutoHarden -Status "Fix-CVE-2022-30910-Follina" -Completed
 echo "####################################################################################################"
 echo "# Fix-HiveNightmare"
 echo "####################################################################################################"
@@ -2720,8 +2730,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUrvxgzpqhJCx+958jSuxOUxtO
-# CESgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUEjoWwWnCRosb5EDs8q98r+j5
+# ovugggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2779,16 +2789,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFE6b6V8wGyJIuMCuv+4HeZD0EUsBMA0GCSqGSIb3DQEBAQUA
-# BIICAE2UjLjJcIEU9Dk+2mhVU17J7GuqSR14jrSmuNEXd70JQlHC7QkU0b3i9ujo
-# qyRY1yy3sh29WeIIPcW4ef0UvfRS4Sc1Li6JJdJNx9q5NIZW48vwEoU1RE7HDW4q
-# JL92DlJZgyWkMn1gpb86ZzaM/Kl88rurS+LpyaHZEYZ51fWUxa/HHEuW10wnH7Tg
-# oDJAC3KztKybORs8x5fbyp4HhKf/e9DZCnQI3PpV2mI8/56ClJeOXlZebo7rlTVA
-# k6W/FdvcIWz4GW//GyPFTmYuqrAj3+eTtZqXIIVK9k2kCuXUaJXa3ZFtNFjwYJD6
-# P7UlV7HiNVlBSY6SlkVrG5lfxIXdLA4dffLvrz0ZV2SPyNiRDCk3bGCglcXVPdaW
-# gmQqka47sijb6BN4BxDTNTJcV2QUhr/uSey1dju6bPYVFlj1I1W+TVtueDdj2qW1
-# VyKhLVtRlzyEVEgW14uX8riCjwGBekWmQbQ2rLgDofrUf+ct7IJmdkeXboCJQLH+
-# MN/89ZNQ/OfT9a7kP3jCENREhDdU0l+PTnsq8Ci9kmRj94WwOlShMfiiR2tY10+U
-# q313U5kbU54rxGu9MgBIfjFRow753+eQUM/mFoiBgzELLFaMhdaCLWh4g1DVi7i8
-# SFYCrziimMWbccMJKBvbwEaUKALvOnkMgeL9eNman97Xgp7D
+# KoZIhvcNAQkEMRYEFOjunV5vn9291PYXipvB92isiXZHMA0GCSqGSIb3DQEBAQUA
+# BIICAHBDJ7moN6C0uxKcYsKUWEudr5XPcCYUqSMNSlHE9ZZK9KwRH/crUkOoQpms
+# J0HlZvHCIQTv/ng8k/PiO8xI8PifOjgOion4otrEZrUCymdFDJePplBllrF1wDYh
+# 2jflTNpo/7OZf5Wpm6A/bSxDilNbwhRL9zNdugsBV+gjgNwX9ug0fbwl58oJNLHW
+# mcRSFXIa4egmab2/jHEcorw0v6qR3Hyq5IixQVjEdmEckQFYBXQQV3ekcDV1Eaez
+# sKdOj7jbzf+9RNss9q51WjMrJxc1WBCVh/96+SQMeT9RG/4POjVc1gXf9lunTyeV
+# oR10TkS1gseKtVI4e5d6aDHf1ST1JatZqOHhMtf6ZaUOvDGYkY/mx5/1WmTxdM2X
+# imXPGzOOUsfXcIV7ckj88plKwigKG7v7ZZaBZWliO6th5ciQ5gJnwct1G1qFh6Xd
+# psSwLjbdyDepeA9ftRLg6yruuWVIXb/mhmVwvL8BGy3TVM6kkcV9HEGDR+p4NXwf
+# 05pL5xQJXfwqhlmAEmwvZYXABOAG0WvVgJxgOZpcXoKAxY/3CgXN2jfctTFrTtfv
+# Fbf0nm9MbMwh1c/9oTMntc/XRLn1JvpzC/vSQiK+Oyx2vLMbVPNuAk3HubosAVbU
+# acdQUoOTQuCATmeQyYNENBXY/b78N5WNgd6cxTZbVRnarLUa
 # SIG # End signature block
