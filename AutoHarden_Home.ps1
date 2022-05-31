@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-06-01-01-36-12
-$AutoHarden_version="2022-06-01-01-36-12"
+# Update: 2022-06-01-01-42-26
+$AutoHarden_version="2022-06-01-01-42-26"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1134,6 +1134,10 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Fix-CVE-2022-30
 # https://twitter.com/gentilkiwi/status/1531384447219781634
 # https://twitter.com/MalwareJake/status/1531427953967607810
 reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\ScriptedDiagnostics" /t REG_DWORD /v EnableDiagnostics /d 0 /f
+
+# https://twitter.com/sans_isc/status/1531075423270051841?t=nNc5djJsb8TgUAarCqsYOQ&s=09
+# https://twitter.com/sans_isc/status/1531217874878181376?s=20&t=gYeImWXIVMbppQvb3oDY5g
+reg delete "HKCR\ms-msdt" /f
 
 Write-Progress -Activity AutoHarden -Status "Fix-CVE-2022-30910-Follina" -Completed
 echo "####################################################################################################"
@@ -2563,8 +2567,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUJ2rDU0eP8IfG1vfV7u8xxD2t
-# a26gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU84NCa4HhYWa9yVItWECZM3xo
+# TPOgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2622,16 +2626,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFCzgmZTcXgFbkUlAACfgWt5T5MjzMA0GCSqGSIb3DQEBAQUA
-# BIICACcWKMfE3+5JrJpZLpFsDTWpL1SvJ099tSzpmvIGCdz9D54mEmNgEU8TvNq+
-# aUjhQIy5G5OIiedhn+5LrLvFuD+wiuaDe9SMiSaEqXcQmimwIocWAZ2fMzPkErW7
-# qI44WNpKbiMMd5P/E/R2ZSFZnDHjtPF1hajUFjtxR3sF8zIBQcoJIC19e3PH/QgC
-# 1tDOje29xjVfdC0O2Alu5Gf6wdvEWMqH+6GSqZ3uXAXl6VokVmoi4KInLMR4thpo
-# 5LOhn4enZSmSWOpj7djV1NH4NiO7vZDXtyf7II5jEUmpZIN+rdwWHfIg1uYKuoar
-# s2xfQdX5J/aEllXvPdXfLrG5pB4NvAQxSpWcoDA9IcHgSCsrX+eeiySWXJl2S/Xm
-# zxWs5X3a3rh9FZ06+u46iZkXZqj6z8LpNg2ZxBCO+cvuwzbNTIXUmmhG0os797sa
-# Gme1HfyqsDrzrN73poWKtbs+BpS2VNjqgxBcJH06zbAdl1iIqgKVozYhbQFsrGjm
-# LHWh9HmrYjBrwRCNPmCOQsLGjSQdQewcFZjbEq1LPU5lJ/kaiZ4xuFeMXyIMIIpQ
-# jXLMvGOUlreNaVCUk8o1W3qLgRS65mR43rpVWnq2c+QPTeFGepO6mN92I6hJuf3c
-# M4Y4GfJHa6hKQHqW/8rIwtAAGiEUCKDtpqkg4O02uKlJsAf5
+# KoZIhvcNAQkEMRYEFCYH3mvmBRAOcfm3YmwvUMCB3hGNMA0GCSqGSIb3DQEBAQUA
+# BIICAFz0hLc5BB7Vp+jThWeNoqhz4Wj/0AdWqjTKbZWy7v5epL9+pmE8BUsTOOJo
+# 3lhw0HYl5ZVGWQeoTk5c+rkpXJkysmkusyuHgqehN4z6NMnm14wIa034hUvuyqNw
+# 4qTa0SWx5jJddYawtgCE2vyyMZDxmALDZhCsb0OMi+F6amBUW5ytAD7yASXouNb+
+# vsqGZrDDNRAraxA7qpZT74yzjpxcvNWRMdOi9NP3M8eAFsekEYnlKv3l2B/9+LxV
+# aaekCruQkA4n6ru7fZmpoTPPy4lIvbhwlnkVcaIXxoLi+C2aVCyWuXZw7cw0iMMt
+# FukUyfND12Ed0pyPt3fKAp8OBJT3yr78i2evw10hd/QgZ39zuDyDRXFsG2+8jgtf
+# l99UsrlRKsC9XeM4tOwJA2wT/IeqMQDsKqwx2TurOghqra/UF+0Y5RZrn2G6HhqX
+# GQ+c0q6Xlhh6lXeGYLjnVTO3i84k0wgQb83qpvg7p07jUxRVSQzF8zACgqvKc5AP
+# 19lJGXYY3i/J5wpJpRPI0WwTlP95kPFokXHqe6Z6jhPcBHQ3CcffJ6n7x7WMVCoG
+# R66p6r7Z+4eDVsOfiQQ1xrxkSXmPx/TgsFV2JH9jgmejZ+df/B/C8bw/aT2QBqw9
+# rUBdBRdrilQVt3Nh/9HMui4pvDa/p19yBBKJQiesiV+zI9RR
 # SIG # End signature block
