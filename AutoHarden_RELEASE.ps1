@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-06-01-01-42-26
-$AutoHarden_version="2022-06-01-01-42-26"
+# Update: 2022-08-24-17-47-45
+$AutoHarden_version="2022-08-24-17-47-45"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -698,6 +698,9 @@ FWRule @{
 # Note about 135/TCP => https://superuser.com/questions/669199/how-to-stop-listening-at-port-135/1012382#1012382
 # Port 135/TCP can be killed in 100% of server and workstation if CreateObject("Excel.Application", RemoteMachine) is not used
 
+# Disable ICMP redirects => https://fr.wikipedia.org/wiki/Attaque_par_redirection_ICMP
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v EnableICMPRedirect /t REG_DWORD /d 0 /f
+
 Write-Progress -Activity AutoHarden -Status "1.1-Firewall-BasicRules" -Completed
 echo "####################################################################################################"
 echo "# 1.1-Firewall-Malware"
@@ -883,6 +886,9 @@ testNetshRPCPort 'ipv4' 'udp'
 testNetshRPCPort 'ipv4' 'tcp'
 testNetshRPCPort 'ipv6' 'udp'
 testNetshRPCPort 'ipv6' 'tcp'
+
+# RPC: Allow only authenticated RPC Clients to connect to RPC Servers
+reg add "HKLM\Software\Policies\Microsoft\Windows NT\Rpc" /v RestrictRemoteClients /t REG_SZ /f /d 1
 
 Write-Progress -Activity AutoHarden -Status "1.4-Firewall-RPC" -Completed
 echo "####################################################################################################"
@@ -1071,9 +1077,6 @@ schtasks.exe /Change /TN "\Microsoft\Windows\Device Information\Device" /Disable
 		logSuccess "Service >$_< has been disabled"
 	}
 }
-
-# Disable Wifi sense telemetry
-reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" /v AutoConnectAllowedOEM /t REG_DWORD /d 0 /f
 
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SoftLandingEnabled /t REG_DWORD /d 0  /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f
@@ -2003,6 +2006,15 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CWDIllegalInD
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-DLLHijacking" -Completed
 echo "####################################################################################################"
+echo "# Hardening-DMA"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-DMA" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-DMA"
+# Disable new DMA devices when this computer is locked
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\FVE" /v DisableExternalDMAUnderLock /t REG_DWORD /d 1 /f
+
+Write-Progress -Activity AutoHarden -Status "Hardening-DMA" -Completed
+echo "####################################################################################################"
 echo "# Hardening-DNSCache"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-DNSCache" -PercentComplete 0
@@ -2182,6 +2194,9 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /t REG_D
 # WiFi Sense: Shared HotSpot Auto-Connect: Disable
 reg add "HKEY_LOCAL_MACHINE\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" /t REG_DWORD /v value /d 0 /f
 
+# Do not allow Windows to automatically connect to suggested open hotspots
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" /v AutoConnectAllowedOEM /t REG_DWORD /d 0 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-Wifi" -Completed
 echo "####################################################################################################"
 echo "# Log-Activity"
@@ -2212,7 +2227,7 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Cha
 
 if( -not [System.IO.File]::Exists("${AutoHarden_Logs}\AuditPol_BEFORE.log.zip") ){
 	Auditpol /get /category:* | Out-File -Encoding UTF8 $AutoHarden_Logs\AuditPol_BEFORE.log
-	Compress-Archive -Path "${AutoHarden_Logs}\AuditPol_BEFORE.log" -CompressionLevel "Optimal" -DestinationPath "${AutoHarden_Logs}\AuditPol_BEFORE.log.zip"
+	Compress-Archive -Path "${AutoHarden_Logs}\AuditPol_BEFORE.log" -CompressionLevel "Optimal" -DestinationPath "${AutoHarden_Logs}\AuditPol_BEFORE.log.zip" -Force
 }
 
 
@@ -2565,12 +2580,35 @@ echo "# Software-install-2-GlobalPackages"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Software-install-2-GlobalPackages" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Software-install-2-GlobalPackages"
+choco feature enable -n=useRememberedArgumentsForUpgrades
 chocoInstall vcredist-all
 chocoInstall 7zip.install
 chocoInstall greenshot
 chocoInstall vlc
 chocoInstall sysinternals
 chocoInstall keepassxc
+#chocoInstall brave
+#choco pin add -n=brave
+
+#chocoInstall Firefox
+#choco pin add -n=Firefox
+# OR
+# choco uninstall Firefox -n --skipautouninstaller
+
+#chocoInstall kitty
+#chocoInstall mobaxterm
+#chocoInstall nerdfont-hack
+#chocoInstall obsidian
+#chocoInstall signal
+#chocoInstall synctrayzor
+#chocoInstall ccleaner.portable
+#chocoInstall dellcommandupdate
+#chocoInstall dismplusplus
+#chocoInstall forticlientvpn
+#chocoInstall git.install
+#chocoInstall gsudo
+#chocoInstall imageglass
+#chocoInstall vscode.install
 
 Write-Progress -Activity AutoHarden -Status "Software-install-2-GlobalPackages" -Completed
 echo "####################################################################################################"
@@ -2595,10 +2633,10 @@ if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 # Log all autoruns to detect malware
 # From: https://github.com/palantir/windows-event-forwarding/
 if( Get-Command autorunsc -errorAction SilentlyContinue ){
-	$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
 	start-job -Name LogActivity_autoruns -scriptblock {
+		$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
 		autorunsc -nobanner /accepteula -a "*" -c -h -s -v -vt "*" | Out-File -Encoding UTF8 "${autorunsc7z}.csv"
-		Compress-Archive -Path "${autorunsc7z}.csv" -CompressionLevel "Optimal" -DestinationPath "${autorunsc7z}.csv.zip"
+		Compress-Archive -Path "${autorunsc7z}.csv" -CompressionLevel Optimal -DestinationPath "${autorunsc7z}.csv.zip" -Force
 		if( [System.IO.File]::Exists("${autorunsc7z}.csv.zip") ){
 			Remove-Item -Force "${autorunsc7z}.csv"
 		}
@@ -2723,7 +2761,7 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running ZZZ-30.__END__"
 logInfo 'Waiting for the job autoruns...'
 Wait-Job -Name LogActivity_autoruns -ErrorAction SilentlyContinue
 Stop-Transcript
-Compress-Archive -Path $AutoHardenTransScriptLog -CompressionLevel "Optimal" -DestinationPath "${AutoHardenTransScriptLog}.zip" -ErrorAction SilentlyContinue
+Compress-Archive -Path $AutoHardenTransScriptLog -CompressionLevel "Optimal" -DestinationPath "${AutoHardenTransScriptLog}.zip" -ErrorAction SilentlyContinue -Force
 if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 	Remove-Item -Force $AutoHardenTransScriptLog
 }
@@ -2734,8 +2772,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUemllBaMIHXQV5qyslN6Rnxm/
-# TKSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU1bD7DvW8GuD+Py2yqdqyt0kq
+# 14Kgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2793,16 +2831,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFKRSC9EGZL65lDPjISPUrHtqKvhcMA0GCSqGSIb3DQEBAQUA
-# BIICABy+lmATnBMF9U5pTzZZf9uVslAut0xQp/0GwKZo6AdN/1xb5I8GoSNh2xjN
-# 2mJjO30Hmsk8kyBZj6uz2A0rFFs9h1qajRY3uVv8AMee6DLktt/ubAKPw4Fp38NB
-# U/Itezd9aSLGLEC+bajjezJze+hHCU2gPGOAuWQKDVPx5LJDmiM2MfPj3IZ9YkGL
-# PVk1oxp8xeAsbkBHSwtAIlolHk0fjGY5M1ON8GzwyMvoZleUE7y431orHgE5EGD5
-# Shj6bbLoQ4A1roxsRaUksxVR9oip9UuxXd2092vx+wCTznPhuKBuQBLHLDPIZClq
-# hmpiwlGpj2R0bQUPPlMyKTKGOhvxlogk2+cs5bsgtBeCwcsId8bR1ecLJox7bH5u
-# 7TfO72bmazP9B3gRmEmXuTERoVMXS2q+A/qKSvEOhRFHHpL7PkBc2Msarsr4fTIA
-# X/yPHl6+7ymoyga6mn+yMmpqD24k3xYaa5Eyv9yfcGqIEwDM5zpLoi8w4+h/C9vr
-# Q5gm7w9UPf5v/fVxanpqEb59HlkuyuGvPPbWVlPd44t0B0F1UpF9CUsDW9Srs9Wv
-# 8BZzm4TwUnzONrc3infcXXp6SFLezL0pW3OM/EvnToAsjJkqgejZHjO1U6FeEuJF
-# LP/OXbfp5qfUx0pdNue6Pq0PA3YUL1FmSfIfe0gTB/HM9GPy
+# KoZIhvcNAQkEMRYEFOIyJBRMJ+NSe7t9zejZGbqjpOEVMA0GCSqGSIb3DQEBAQUA
+# BIICAEpyRcIvVtuptGgibMud3Z39H2GbnBQLBD0Z2po5ADZtuCIVRdJfharu4xmB
+# VJFv/k72IbWKXA7vIUu+V/uV9KIAOOvxmN09BtnTg75ou3Zuj1H0BRk5WuARKXn2
+# ZS7gNI5vLiJLCM04Va83ix6mK3Z0I4RIhodEYaX7eUbTzOEUuJV2MKP2XrZThRXr
+# +lhi4UO+M4IAMgfBYDcZjgGqS6fnZL9EuFtUveQXo1S+1gfLhc9EiV/q1fiOp3lu
+# fzzuXXAhM6Nn33bSxGhu+IQyTAsCqeSm2C1jz+4tK8/erG05QytQMsw5vrH9kJBT
+# 3UMqEQERTi0lXjxJyIrruELdoBHYxxTZnuNfQdEbwMJF1/xAT0Vs8st/uqo2CKyJ
+# 344qxmo3VKTs4q0FIWIYElGVH0SQqub8KQwxVGzyNPO9Kg+kAWMPtFPIrtSUZxm6
+# vYfDVHy64XnU4xJqlZETrKe3dw7U2a1na0R2leByvjacQApd/iT4DBU7tJSMGKn9
+# 9ErU+DOa4G/02WiAiDQVX9PgCKyDIZpuQQORjDoniKNaDbqqfIbZEPKSTL44/BwW
+# +BHIfDWLgXEM9UjOC1vDdukD4Tl+UUbey868YLcVCRVkeImEr7YmQNrLfy4ac+ij
+# sPJQ0ebdWOYpXP//zUGmi8s3YoKAllpibVmDz/7Chpz8SRPF
 # SIG # End signature block

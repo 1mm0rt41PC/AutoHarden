@@ -20,3 +20,6 @@ testNetshRPCPort 'ipv4' 'udp'
 testNetshRPCPort 'ipv4' 'tcp'
 testNetshRPCPort 'ipv6' 'udp'
 testNetshRPCPort 'ipv6' 'tcp'
+
+# RPC: Allow only authenticated RPC Clients to connect to RPC Servers
+reg add "HKLM\Software\Policies\Microsoft\Windows NT\Rpc" /v RestrictRemoteClients /t REG_SZ /f /d 1
