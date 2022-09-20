@@ -105,12 +105,11 @@ function createTempFile( $data, [Parameter(Mandatory=$false)][string]$ext='' )
 function reg()
 {
 	$action = $args[0].ToLower()
-	$hk = $args[1].Replace('HKLM','HKLM:').Replace('HKCR','HKCR:').Replace('HKCU','HKCU:')
-	$hk = $hk.Replace('HKEY_LOCAL_MACHINE','HKLM:').Replace('HKEY_CLASSES_ROOT','HKCR:').Replace('HKEY_CURRENT_USER','HKCU:')
+	$hk = $args[1].Replace('HKCU','HKCU:').Replace('HKEY_CURRENT_USER','HKCU:')
 
 	$type = 'REG_DWORD'
-	$key = '???'
-	$value = '???'
+	$key = ''
+	$value = ''
 
 	for( $i=2; $i -lt $args.Count; $i+=2 )
 	{
@@ -127,26 +126,77 @@ function reg()
 	}
 
 	if( $action -eq 'add' ){
-		try {
-			if( (Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop) -eq $value ){
+		if( $hk.StartsWith('HKCU:') ){
+			$path = $hk.Replace('HKCU:\','')
+			Get-ChildItem REGISTRY::HKEY_USERS | select Name | foreach {
+				$name = $_.Name.Trim('\')
+				$name = ('{0}\{1}' -f $name,$path).Replace('\\','\')
+				Write-host "reg.exe add $name /v $key /d $value /t $type /f"
+				try{
+					if( (Get-ItemPropertyValue "Registry::$name" -Name $key -ErrorAction SilentlyContinue) -ne $value ){
+						throw "Invalid value"
+					}
+					logInfo "[${name}:$key] is OK ($value)"
+				}catch{
+					logSuccess "[${name}:$key] is now set to $value"
+					reg.exe add "$name" /v "$key" /t $type /d "$value" /f
+				}
+			}
+			return $null
+		}
+		try{
+			Write-Host "reg.exe add $hk /v $key /d $value /t $type /f"
+			if( (Get-ItemPropertyValue "Registry::$hk" -Name $key -ErrorAction Stop) -eq $value ){
 				logInfo "[${hk}:$key] is OK ($value)"
 			}else{
 				logSuccess "[${hk}:$key] is now set to $value"
-				reg.exe $args
+				reg.exe add "$hk" /v "$key" /d "$value" /t $type /f
 			}
 		}catch{
 			logSuccess "[${hk}:$key] is now set to $value"
-			reg.exe $args
+			reg.exe add "$hk" /v "$key" /d "$value" /t $type /f
 		}
+		return $null
 	}elseif( $action -eq 'delete' ){
-		try {
-			Get-ItemPropertyValue $hk -Name $key -ErrorAction Stop
-			logSuccess "[${hk}:$key] is now DELETED"
-			reg.exe $args
+		if( $hk.StartsWith('HKCU:') ){
+			$path = $hk.Replace('HKCU:\','')
+			Get-ChildItem REGISTRY::HKEY_USERS | select Name | foreach {
+				$name = $_.Name.Trim('\')
+				$name = ('{0}\{1}' -f $name,$path).Replace('\\','\')
+				try{
+					Get-ItemPropertyValue "Registry::$name" -Name $key -ErrorAction Stop
+					if( -not [string]::IsNullOrEmpty($key) ){
+						logSuccess "[${name}:$key] is now DELETED"
+						Write-Host "reg.exe delete $name /v $key /f"
+						reg.exe delete "$name" /v "$key" /f
+					}else{
+						logSuccess "[$name] is now DELETED"
+						Write-Host "reg.exe delete $name /f"
+						reg.exe delete "$name" /f
+					}
+				}catch{
+					logInfo "[${name}:$key] is NOT present"
+				}
+			}
+			return $null
+		}
+		try{
+			Get-ItemPropertyValue "Registry::$hk" -Name $key -ErrorAction Stop
+			if( -not [string]::IsNullOrEmpty($key) ){
+				logSuccess "[${hk}:$key] is now DELETED"
+				Write-Information "reg.exe delete $hk /v $key /f"
+				reg.exe delete "$hk" /v "$key" /f
+			}else{
+				logSuccess "[${hk}] is now DELETED"
+				Write-Information "reg.exe delete $hk /f"
+				reg.exe delete "$hk" /f
+			}
 		}catch{
 			logInfo "[${hk}:$key] is NOT present"
 		}
+		return $null
 	}
+	Write-Error "Not implemented"
 }
 
 function mywget( $Uri, $OutFile=$null )

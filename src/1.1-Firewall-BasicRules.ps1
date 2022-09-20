@@ -23,3 +23,8 @@ FWRule @{
 
 # Disable ICMP redirects => https://fr.wikipedia.org/wiki/Attaque_par_redirection_ICMP
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v EnableICMPRedirect /t REG_DWORD /d 0 /f
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" /v EnableICMPRedirect /t REG_DWORD /d 0 /f
+
+# IP source routing protection level (protects against packet spoofing)
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DisableIPSourceRouting /t REG_DWORD /d 2 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" /v DisableIPSourceRouting /t REG_DWORD /d 2 /f

@@ -21,5 +21,22 @@ testNetshRPCPort 'ipv4' 'tcp'
 testNetshRPCPort 'ipv6' 'udp'
 testNetshRPCPort 'ipv6' 'tcp'
 
+
+
+###################################################################################################
 # RPC: Allow only authenticated RPC Clients to connect to RPC Servers
-reg add "HKLM\Software\Policies\Microsoft\Windows NT\Rpc" /v RestrictRemoteClients /t REG_SZ /f /d 1
+# reg add "HKLM\Software\Policies\Microsoft\Windows NT\Rpc" /v RestrictRemoteClients /t REG_SZ /f /d 1
+# WARNING, a Windows update, will break all laptops.
+# CONFLIC with DMA, will crash computer into bootloop
+# In case of laptop locked down by dma, the computer will show an error "unable to read memory at 0x...." and the laptop will not be able to reboot.
+# Fix:
+#		> get a shell in rescue mode and type:
+#		SET letter=C:
+#		reg.exe load HKLM\hklm_system %letter%\Windows\System32\Config\system
+#		reg.exe load HKLM\hklm_soft %letter%\Windows\System32\Config\software
+#		reg.exe delete "HKLM\hklm_soft\Policies\Microsoft\Windows NT\Rpc" /v RestrictRemoteClients /f
+#		reg.exe add HKLM\hklm_soft\Policies\Microsoft\FVE /v DisableExternalDMAUnderLock /d 0 /t REG_DWORD /f
+#		reg.exe unload HKLM\hklm_system
+#		reg.exe unload HKLM\hklm_soft
+#		del /q %letter%\Windows\AutoHarden\*.ps1
+

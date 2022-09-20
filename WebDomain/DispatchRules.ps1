@@ -20,7 +20,7 @@ $servers = @'
 '@
 
 # For each role do not apply theses rules
-$rules = @"
+$blacklist = @"
 {
 	'Pentester': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -58,29 +58,86 @@ $rules = @"
 		'Hardening-DLLHijacking',
 		'Optimiz-DisableAutoReboot'
 	],
-	'Corp-Workstations-LightST': [
-		'1.4-Firewall-BlockOutgoingSNMP',
-		'1.2-Firewall-Office',
-		'1.3-Firewall-IE',
-		'Crapware-Onedrive',		
-		'Crapware-RemoveUseLessSoftware__Uninstall-OneNote',
-		'Crapware-RemoveUseLessSoftware__Uninstall-Skype',
-		'Hardening-AccountRename',
-		'Hardening-DisableMimikatz__Mimikatz-DomainCredAdv',
-		'Hardening-DisableMimikatz__CredentialsGuard',
-		'Optimiz-ClasicExplorerConfig',
-		'Optimiz-DisableAutoUpdate',
-		'Optimiz-DisableDefender',		
-		'Hardening-DLLHijacking',
-		'Software-install-notepad++',
-		'Harden-RDP-Credentials'
-	],
 	'Corp-Servers': [
 		$servers
 	],
 	'RELEASE': []
 }
 "@ | ConvertFrom-Json
+
+$whitelist = @"
+{
+	'Corp-Workstations-LightST': [
+		'0.0__init__0',
+		'0.0__init__1-Conf',
+		'0.0__init__2-Functions-Const',
+		'0.0__init__2-Functions-logs',
+		'0.0__init__2-Functions-RPC',
+		'0.0__init__2-Functions',
+		'0.0__init__3-IsAdmin',
+		'0.0__init__4-MigrateLogs',
+		'0.1-AutoScheduledTask',
+		'1.0-Firewall-Functions',
+		'1.1-Firewall-BasicRules',
+		'1.1-Firewall-Malware',
+		'1.4-Firewall-RPC',
+		'1.5-Firewall-DisableNotification',
+		'1.6-Firewall-AvoidSMBOnInternet',
+		'1.6-Firewall-StealtMode',
+		'2-Hardening-ADIDNS',
+		'2-Hardening-HardDriveEncryption',
+		'2-Hardening-Powershell',
+		'Crapware-Cortana',
+		'Crapware-DisableTelemetry-and-ADS',
+		'Crapware-RemoveUseLessSoftware',
+		'Crapware-Windows10UpgradeOldFolder',
+		'Fix-CVE-2020-16898',
+		'Fix-CVE-2022-30910-Follina',
+		'Fix-HiveNightmare',
+		'Fix-PetitPotam',
+		'Harden-Adobe',
+		'Harden-DisableShortPath',
+		'Harden-Office',
+		'Harden-VMWareWorkstation',
+		'Harden-VoiceControl',
+		'Harden-WindowsDefender',
+		'Hardening-BlockAutoDiscover',
+		'Hardening-BlockUntrustedFonts',
+		'Hardening-CertPaddingCheck',
+		'Hardening-Disable-C-FolderCreation',
+		'Hardening-DisableCABlueCoat',
+		'Hardening-DisableIPv6',
+		'Hardening-DisableLLMNR',
+		'Hardening-DisableMimikatz',
+		'Hardening-DisableNetbios',
+		'Hardening-DisableRemoteServiceManagement',
+		'Hardening-DisableSMBServer',
+		'Hardening-DisableWPAD',
+		'Hardening-DNSCache',
+		'Hardening-FileExtension',
+		'Hardening-LDAP',
+		'Hardening-Navigator',
+		'Hardening-RemoteAssistance',
+		'Hardening-SMB',
+		'Hardening-UAC',
+		'Hardening-Wifi-RemoveOpenProfile',
+		'Hardening-Wifi',
+		'Log-Activity',
+		'Optimiz-CleanUpWindowFolder-MergeUpdate',
+		'Optimiz-CleanUpWindowFolder',
+		'Optimiz-CleanUpWindowsName',
+		'Optimiz-cmd-color',
+		'Optimiz-DisableAutoReboot',
+		'Optimiz-DisableReservedStorageState',
+		'Software-install-1-Functions',
+		'Software-install-Logs',
+		'ZZZ-10.Asks-Cleanup',
+		'ZZZ-20.Firewall-Cleanup',
+		'ZZZ-30.__END__'
+	]
+}
+"@ | ConvertFrom-Json
+
 
 function logInfo( $msg )
 {
@@ -92,23 +149,43 @@ function logError( $msg )
 	Write-Host -NoNewline -Background 'Red' '[X]'
 	Write-Host " $msg"
 }
+
+$blacklist.PSObject.Properties | Select Name | foreach {
+	$tragetFolderName=$_.Name;
+	mkdir -Force $MyDir\$tragetFolderName | Out-Null
+	New-Item -Force -ItemType file $MyDir\$tragetFolderName\.gitkeep
+}
+
+
 $symLinkList = New-Object -TypeName "System.Text.StringBuilder"
 $symLinkList.AppendLine(".gitignore") | Out-Null
 Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 	$ps1Rule=$_.Name
 	$FullName=$_.FullName
 	$symLinkList.AppendLine("*/$ps1Rule") | Out-Null
-	Get-ChildItem -Directory $MyDir | foreach {
-		$tragetFolder=$_.FullName;
+	$blacklist.PSObject.Properties | Select Name | foreach {
+		$tragetFolder=(Get-Item $_.Name).FullName;
 		$tragetFolderName=$_.Name;
 		if( -not [System.IO.File]::Exists("$tragetFolder\$ps1Rule") ){
-			if( -not ($rules."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
-				logInfo "Create $tragetFolder\$ps1Rule"
+			if( -not ($blacklist."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
+				logInfo "[Blacklist] Create $tragetFolder\$ps1Rule"
+				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
+			}
+		}
+	}
+	$whitelist.PSObject.Properties | Select Name | foreach {
+		$tragetFolder=(Get-Item $_.Name).FullName;
+		$tragetFolderName=$_.Name;
+		if( -not [System.IO.File]::Exists("$tragetFolder\$ps1Rule") ){
+			if( ($whitelist."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
+				logInfo "[Whitelist]Create $tragetFolder\$ps1Rule"
 				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
 			}
 		}
 	}
 }
+
+
 
 Write-Host "Applying exception..."
 $rules.PSObject.Properties | foreach {
