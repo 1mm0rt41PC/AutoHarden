@@ -92,7 +92,7 @@ function FWRule( $param )
 	}
 	if( (Get-NetFirewallRule -Group $param['Group'] -ErrorAction Ignore | where {$_.Name -eq $param['Name']}).Count -eq 0 ){
 		logInfo ("Create new FW rule: {0}" -f ($param | ConvertTo-Json))
-		New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue | Out-Null
+		New-NetFirewallRule -Enabled True -Profile Any @param -ErrorAction Continue > $null
 	}else{
 		logSuccess ("FW rule is in place: {0}" -f ($param | ConvertTo-Json))
 	}
@@ -103,10 +103,10 @@ function FWRule( $param )
 # This version doesn't remove hidden rules. Hidden rules can only be removed via registry...
 #Get-NetFirewallRule | where {
 #	-not ($_.DisplayName -like "*[AutoHarden]*" -or $_.DisplayName -like "*AutoHarden*$AutoHarden_version*")
-#} | Remove-NetFirewallRule -ErrorAction Continue | Out-Null
+#} | Remove-NetFirewallRule -ErrorAction Continue > $null
 #Get-NetFirewallRule -all -policystore configurableservicestore | where {
 #	-not ($_.DisplayName -like "*[AutoHarden]*" -or $_.DisplayName -like "*AutoHarden*$AutoHarden_version*")
-#} | Remove-NetFirewallRule -ErrorAction Continue | Out-Null
+#} | Remove-NetFirewallRule -ErrorAction Continue > $null
 
 
 # Following Registry-Keys store the Rules: "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices"

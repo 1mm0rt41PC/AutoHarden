@@ -207,13 +207,13 @@ function mywget( $Uri, $OutFile=$null )
 		if( $OutFile -eq $null ){
 			$ret=Invoke-WebRequest -UseBasicParsing -Uri $Uri
 		}else{
-			Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $OutFile | Out-Null
+			Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $OutFile > $null
 		}
 	}catch{
 		if( $OutFile -eq $null ){
 			$ret=curl.exe $Uri
 		}else{
-			curl.exe $Uri --output $OutFile | Out-Null
+			curl.exe $Uri --output $OutFile > $null
 		}
 
 	}

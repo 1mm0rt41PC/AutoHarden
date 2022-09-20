@@ -1,2 +1,2 @@
-Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\$Windows.~BT' | Out-Null
-Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\Windows.old' | Out-Null
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\$Windows.~BT' > $null
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'C:\Windows.old' > $null

@@ -2,14 +2,14 @@ try{
 Get-Item -errorAction SilentlyContinue -Force "HKCU:\SOFTWARE\Microsoft\Office\*\*\" | foreach {
 	$name=$_.PSPath
 	Write-Host "Create $name\Security"
-	New-Item -Force -Path $name -Name Security | Out-Null
+	New-Item -Force -Path $name -Name Security > $null
 }
 }catch{}
 try{
 Get-Item -errorAction SilentlyContinue -Force "HKCU:\SOFTWARE\Microsoft\Office\*\" | foreach {
 	$name=$_.PSPath
 	Write-Host "Create $name\Security"
-	New-Item -Force -Path $name -Name Security | Out-Null
+	New-Item -Force -Path $name -Name Security > $null
 }
 }catch{}
 

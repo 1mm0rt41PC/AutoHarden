@@ -10,7 +10,7 @@ FWRemoveBadRules
 Enable-NetFirewallRule -Name '*'
 
 try{
-	mkdir -Force $env:windir\system32\logfiles\firewall | Out-Null
+	mkdir -Force $env:windir\system32\logfiles\firewall > $null
 }catch{}
 
 # Enabling firewall

@@ -15,12 +15,13 @@ if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 # Log all autoruns to detect malware
 # From: https://github.com/palantir/windows-event-forwarding/
 if( Get-Command autorunsc -errorAction SilentlyContinue ){
-	start-job -Name LogActivity_autoruns -scriptblock {
-		$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
+	$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
+	Start-Job -Name LogActivity_autoruns -scriptblock {
+		param($autorunsc7z)		
 		autorunsc -nobanner /accepteula -a "*" -c -h -s -v -vt "*" | Out-File -Encoding UTF8 "${autorunsc7z}.csv"
 		Compress-Archive -Path "${autorunsc7z}.csv" -CompressionLevel Optimal -DestinationPath "${autorunsc7z}.csv.zip" -Force
 		if( [System.IO.File]::Exists("${autorunsc7z}.csv.zip") ){
 			Remove-Item -Force "${autorunsc7z}.csv"
 		}
-	}
+	} -Arg $autorunsc7z
 }

@@ -39,5 +39,5 @@ zij5S/djgP1rVHH+MkgJcUQ/2km9GC6B6Y3yMGq6XLVjLvi73Ch2G5mUWkeoZibb
 yQSxTBWG6GJjyDY7543ZK3FH4Ctih/nFgXrjuY7Ghrk=
 -----END CERTIFICATE-----
 '@ > $CABlueCoat
-Import-Certificate -Filepath $CABlueCoat -CertStoreLocation Cert:\LocalMachine\Disallowed | out-null
+Import-Certificate -Filepath $CABlueCoat -CertStoreLocation Cert:\LocalMachine\Disallowed > $null
 Remove-Item -Force $CABlueCoat -ErrorAction Ignore

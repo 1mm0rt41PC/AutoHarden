@@ -1,4 +1,4 @@
-netsh wlan export profile folder=C:\Windows\Temp | Out-Null
+netsh wlan export profile folder=C:\Windows\Temp > $null
 Get-Item C:\Windows\temp\Wi-Fi-*.xml | foreach {
 	$xml=[xml] (Get-Content $_.FullName)
 	Write-Host "[*] Lecture du profile wifi $($_.Name)"
@@ -8,4 +8,4 @@ Get-Item C:\Windows\temp\Wi-Fi-*.xml | foreach {
 		netsh wlan delete profile name="$p" interface=*
 	}
 }
-Remove-Item C:\Windows\temp\Wi-Fi-*.xml | Out-Null
+Remove-Item C:\Windows\temp\Wi-Fi-*.xml > $null

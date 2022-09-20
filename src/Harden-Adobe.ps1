@@ -1,10 +1,10 @@
 try{
 Get-Item -errorAction SilentlyContinue -Force "HKCU:\SOFTWARE\Adobe\Acrobat Reader\*" | foreach {
 	$name=$_.PSPath
-	New-Item -Force -Path $name -Name JSPrefs | Out-Null
-	New-Item -Force -Path $name -Name Originals | Out-Null
-	New-Item -Force -Path $name -Name Privileged | Out-Null
-	New-Item -Force -Path $name -Name TrustManager | Out-Null
+	New-Item -Force -Path $name -Name JSPrefs > $null
+	New-Item -Force -Path $name -Name Originals > $null
+	New-Item -Force -Path $name -Name Privileged > $null
+	New-Item -Force -Path $name -Name TrustManager > $null
 }
 }catch{}
 # AdobePDFJS hardens Acrobat JavaScript.
