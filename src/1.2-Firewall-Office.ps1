@@ -16,6 +16,11 @@
 		"C:\Program Files*\Microsoft Office*\*\root\*\Powerpnt.exe",
 		"C:\Program Files*\Microsoft Office*\*\Powerpnt.exe"
 	)},
+	@{Name='OneNote'; blockExe=@(
+		"C:\Program Files*\Microsoft Office*\root\*\ONENOTE.exe",
+		"C:\Program Files*\Microsoft Office*\*\root\*\ONENOTE.exe",
+		"C:\Program Files*\Microsoft Office*\*\ONENOTE.exe"
+	)},
 	@{Name='Teams'; blockExe=@(
 		"C:\Users\*\AppData\Local\Microsoft\Teams\*\Squirrel.exe",
 		"C:\Users\*\AppData\Local\Microsoft\Teams\update.exe"

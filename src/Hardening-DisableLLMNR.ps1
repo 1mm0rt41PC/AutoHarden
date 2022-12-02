@@ -9,8 +9,10 @@ fwRule @{
 	Direction='Outbound'
 	Action='Block'
 }
+
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v " EnableMDNS" /t REG_DWORD /d "0" /f
 fwRule @{
-	Name='MBNS'
+	Name='MDNS'
 	Protocol='udp'
 	RemotePort=5353
 	Group='Multicast'

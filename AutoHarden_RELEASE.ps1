@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-09-20-17-41-24
-$AutoHarden_version="2022-09-20-17-41-24"
+# Update: 2022-12-02-11-02-13
+$AutoHarden_version="2022-12-02-11-02-13"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -839,6 +839,11 @@ if( $q -eq $true ){
 		"C:\Program Files*\Microsoft Office*\*\root\*\Powerpnt.exe",
 		"C:\Program Files*\Microsoft Office*\*\Powerpnt.exe"
 	)},
+	@{Name='OneNote'; blockExe=@(
+		"C:\Program Files*\Microsoft Office*\root\*\ONENOTE.exe",
+		"C:\Program Files*\Microsoft Office*\*\root\*\ONENOTE.exe",
+		"C:\Program Files*\Microsoft Office*\*\ONENOTE.exe"
+	)},
 	@{Name='Teams'; blockExe=@(
 		"C:\Users\*\AppData\Local\Microsoft\Teams\*\Squirrel.exe",
 		"C:\Users\*\AppData\Local\Microsoft\Teams\update.exe"
@@ -1198,8 +1203,22 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Assistance\Client\1.0" /
 reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\office\16.0\common\feedback" /v "enabled" /t REG_DWORD /d 0 /f
 reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\office\16.0\common\feedback" /v "includescreenshot" /t REG_DWORD /d 0 /f
 
+# Disable retrieving device metadata from the internet
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Metadata" /v PreventDeviceMetadataFromNetwork /t REG_DWORD /d 1 /f
+# Disable Windows Error Reporting
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f
 
+# disable using your machine for sending windows updates to others
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v DownloadMode /t REG_DWORD /d 0 /f
 
+# Disable sending settings to cloud
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync" /v DisableSettingSync /t REG_DWORD /d 2 /f
+# disable synchronizing files to cloud
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync" /v DisableSettingSyncUserOverride /t REG_DWORD /d 1 /f
+# disable ad customization
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" /v DisabledByGroupPolicy /t REG_DWORD /d 1 /f
+# disable send additional info with error reports
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v DontSendAdditionalData /t REG_DWORD /d 1 /f
 
 #https://github.com/crazy-max/WindowsSpyBlocker/raw/master/data/hosts/spy.txt
 
@@ -1848,8 +1867,10 @@ fwRule @{
 	Direction='Outbound'
 	Action='Block'
 }
+
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v " EnableMDNS" /t REG_DWORD /d "0" /f
 fwRule @{
-	Name='MBNS'
+	Name='MDNS'
 	Protocol='udp'
 	RemotePort=5353
 	Group='Multicast'
@@ -2211,14 +2232,21 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Navig
 	'AutofillCreditCardEnabled',
 	'ImportAutofillFormData'
 ) | foreach {
-	reg add HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome /v $_ /d 0 /f
-	reg add HKEY_LOCAL_MACHINE\Software\Policies\BraveSoftware\Brave /v $_ /d 0 /f
-	reg add HKEY_LOCAL_MACHINE\Software\Policies\Chromium /v $_ /d 0 /f
+	reg add HKLM\Software\Policies\Google\Chrome /v $_ /d 0 /f
+	reg add HKLM\Software\Policies\BraveSoftware\Brave /v $_ /d 0 /f
+	reg add HKLM\Software\Policies\Chromium /v $_ /d 0 /f
+	reg add HKLM\Software\Policies\Microsoft\Edge /v $_ /d 0 /f
 }
 # Enable support for chromecast
-reg add HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome /v EnableMediaRouter /d 1 /f
-reg add HKEY_LOCAL_MACHINE\Software\Policies\BraveSoftware\Brave /v EnableMediaRouter /d 1 /f
-reg add HKEY_LOCAL_MACHINE\Software\Policies\Chromium /v EnableMediaRouter /d 1 /f
+reg add HKLM\Software\Policies\Google\Chrome /v EnableMediaRouter /d 1 /f
+reg add HKLM\Software\Policies\BraveSoftware\Brave /v EnableMediaRouter /d 1 /f
+reg add HKLM\Software\Policies\Chromium /v EnableMediaRouter /d 1 /f
+
+# Disable Edge Welcome screen
+reg.exe add HKLM\Software\Policies\Microsoft\Edge /v HideFirstRunExperience /d 1 /t REG_DWORD /F
+reg.exe add HKLM\Software\Policies\Microsoft\Edge /v AutoImportAtFirstRun /d 0 /t REG_DWORD /F
+reg.exe add HKLM\Software\Policies\Microsoft\Edge /v SyncDisabled /d 1 /t REG_DWORD /F
+reg.exe add HKLM\Software\Policies\Microsoft\Edge /v BrowserSignin /d 0 /t REG_DWORD /F
 
 Write-Progress -Activity AutoHarden -Status "Hardening-Navigator" -Completed
 echo "####################################################################################################"
@@ -2490,6 +2518,9 @@ reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Ad
 reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarGlomLevel /t REG_DWORD /d 1 /f
 # Change Explorer home screen back to "This PC"
 reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v LaunchTo /t REG_DWORD /d 1 /f
+
+reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HidePeopleBar /t REG_DWORD /d 1 /f
+reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" /v PeopleBand /t REG_DWORD /d 0 /f
 
 }
 Write-Progress -Activity AutoHarden -Status "Optimiz-ClasicExplorerConfig" -Completed
@@ -2858,8 +2889,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUogWPNYfZ2gmoXVSGiQLz2HoP
-# 2Rmgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUb7LqSadkc52cF2SJpXa+dk7r
+# mKGgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2917,16 +2948,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFHtKZWYgEtNySt69ZK9GoGohTzHPMA0GCSqGSIb3DQEBAQUA
-# BIICAIw0RTx+0bRtOfo5M3eDTXXdudlStFDbExOiEOp9W7f9ReDHnokLbptgeJ4N
-# i/2pc0SMy+tWnLDLURNadNq/szIxHCpzg0sSwbDikZyZZKomV5ENe5JFUO1zIZzS
-# hHTaSukZ8J9Y028JwSTFoEMZbWBuaZLZRJ+1MYWM3VuuYJH8Pbwqq8Tc82XRLp02
-# Q74z4SiSOSkZ/Ki7uKAhOQmVDpzSoZ5wKxc8DOJKZMU1LFCtSPY/0PpusDCjisjS
-# BTVjFT3s3ihlio7iMrVdkUvePfto4EEm9lKiSahzGCR53dE68xfxANzpi+/dpFqH
-# CpMRQy19nu03yn3iOaxonPc3CmTPmXkkl5UEuAavqu2+ggaTdJZQJqB6DP33ZeaD
-# iYZWjYSWZwNLMt89nlcym9gqk5aoO9Ou5q4bcPA8FP/1h/5wiCOeSXfGtzkxzyLj
-# rLu13ZBfKbaCy0xc5qjzjWgpWgT6Wkj2FfhtDXoVrlLD06i6POwsheotJJbZqgYJ
-# aZNtOrOC+hSUIxcMhyHzDzCMROpqZ78TxqpI+228fmw8Bn/DKUh2uOl78MiZyE11
-# Op/eU7tVJr7VIP73EWG6oqmjdlxCvLn7RQBMPUvRwEmPfoJ0f/mkSgy7WWTi2MFB
-# 38Ifp9XP6a3Ha7KCaQvN48Leng2STqERJ+CcSy39Jy5ynXOT
+# KoZIhvcNAQkEMRYEFMm2PXXljQvi2VWGonIb9owYPX81MA0GCSqGSIb3DQEBAQUA
+# BIICAJrSXEJHBipIcfPx0L49+7S/hnudvGhMEKgdBaVzq5oaX47pL/gGvTmW0YHz
+# UA1ji6FjwDL3M2CdIe8lXTZ4ANC4zqks0yO81wJf532khSnpc+QGEp4SBe20BEyq
+# 39UxOyev665t9HQGijW7hqUCDN+PLqV/l/5pxzjDxQZbZiL17qPXLhtbW6FAzB2s
+# SIO1PPJbA2a0j89oxIA1yO0X1m/Hmcc2BCD0p7gCiccIBWc8PMeUhzRKT2ulzJdg
+# bqydFGk1HkUtlcxSwNR3pkZLJEVEM0hdOx5tEQZxklhrJsrJyNsoD9fYI168OXD3
+# /RHfsU3my8sUTHyOgoE2saPQI+kpoCxKJJhbDXhHZ/KgZGeg4Wnik4EBJCrpxOGK
+# 8rkva96mk1kItKqHom76iV4OXooa7mqWSbeSAfXqQw7bf2j5FmT87ABq9yTf/41e
+# ibz53RE5hRQezbRjtT0pbhKGWE/rofUQwEheQAqVGAVZLFQsMrGKAOh62W7b4upY
+# w8oRYDzGm1F/8usHeqeRtUx3cE1We2JTdGg8ojnh8Zkfu/wJX7i4Ybm/YOLIUbxn
+# ccz3PQmRUFbvxW7GKOLSdbAq8kpmbAC1ZUfRvYBW8UfBSCp+rfOAt7KkpDVzxZZv
+# ZNYjW7kIQMj4ybYLGwH4y75cf/37SRUvLa1Xd24mBaH1QT5h
 # SIG # End signature block
