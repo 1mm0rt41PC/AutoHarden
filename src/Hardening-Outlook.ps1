@@ -1,0 +1,1 @@
+reg add "HKCU\SOFTWARE\Microsoft\Office\16.0\Outlook\Preferences" /v EnableCloudSettings /t REG_DWORD /d 0 /f
