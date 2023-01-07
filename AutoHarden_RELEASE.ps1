@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2022-12-02-11-02-13
-$AutoHarden_version="2022-12-02-11-02-13"
+# Update: 2023-01-07-22-56-12
+$AutoHarden_version="2023-01-07-22-56-12"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -2801,7 +2801,7 @@ sCmd = """" & LeftB(WScript.ScriptFullName, LenB(WScript.ScriptFullName) - LenB(
 For x = 1 To WScript.Arguments.Count - 1
    sCmd = sCmd & WScript.Arguments(x) & " "
 Next
-sCmd = sCmd & """"
+sCmd = Trim(sCmd) & """"
 CreateObject("WScript.Shell").Exec(sCmd)
 WScript.Quit
 '@ | out-file -encoding ASCII $npp_path
@@ -2889,8 +2889,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUb7LqSadkc52cF2SJpXa+dk7r
-# mKGgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUyLPIEErGvI3KQovQmqdsnd9X
+# 0Xugggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2948,16 +2948,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFMm2PXXljQvi2VWGonIb9owYPX81MA0GCSqGSIb3DQEBAQUA
-# BIICAJrSXEJHBipIcfPx0L49+7S/hnudvGhMEKgdBaVzq5oaX47pL/gGvTmW0YHz
-# UA1ji6FjwDL3M2CdIe8lXTZ4ANC4zqks0yO81wJf532khSnpc+QGEp4SBe20BEyq
-# 39UxOyev665t9HQGijW7hqUCDN+PLqV/l/5pxzjDxQZbZiL17qPXLhtbW6FAzB2s
-# SIO1PPJbA2a0j89oxIA1yO0X1m/Hmcc2BCD0p7gCiccIBWc8PMeUhzRKT2ulzJdg
-# bqydFGk1HkUtlcxSwNR3pkZLJEVEM0hdOx5tEQZxklhrJsrJyNsoD9fYI168OXD3
-# /RHfsU3my8sUTHyOgoE2saPQI+kpoCxKJJhbDXhHZ/KgZGeg4Wnik4EBJCrpxOGK
-# 8rkva96mk1kItKqHom76iV4OXooa7mqWSbeSAfXqQw7bf2j5FmT87ABq9yTf/41e
-# ibz53RE5hRQezbRjtT0pbhKGWE/rofUQwEheQAqVGAVZLFQsMrGKAOh62W7b4upY
-# w8oRYDzGm1F/8usHeqeRtUx3cE1We2JTdGg8ojnh8Zkfu/wJX7i4Ybm/YOLIUbxn
-# ccz3PQmRUFbvxW7GKOLSdbAq8kpmbAC1ZUfRvYBW8UfBSCp+rfOAt7KkpDVzxZZv
-# ZNYjW7kIQMj4ybYLGwH4y75cf/37SRUvLa1Xd24mBaH1QT5h
+# KoZIhvcNAQkEMRYEFGvgEj4l24EWcLjPgMBGSdr/92PxMA0GCSqGSIb3DQEBAQUA
+# BIICAGkaVuH89VPJy4SXqG9kOQZ14AR2cbjd69P21HA0e5m+7sSZDxDgaeZJwUg3
+# kXSk3MZfx/DNaL4HLNpk9kJMDxXUAgAGa791vND2xPA4i4mgPiQJ/eCkrn0HKKzK
+# YK9JJlSMsskq+mTO3u6AWWOn+E8oIpHKh+duIs5Ioot2pIrNk1DuMPKNI3/D9oDV
+# H3XfhEXU6ZYKkqI6ClkHu8e8gJZLbbRH37K5eiCgfq+GCJe8Y1No2KqqPQ3xw4e9
+# OUXuaW6jdI9dgHP77b3BjB3+M+Vc3Mcyq9dYXMsOIVjIKmUPnalMHXUbGCy4ei5E
+# 98Qe7PVmrnFsOF09EXwe94Fobi05jwQzolVuoPno8DqX7IAOYxNLOfGhBhGKEhOe
+# q6MFTXF7miGRubW/0lqUiMTHPRNStLE/0oln7OqwMzeKlfVq1jW33UgjZGWl0FQ9
+# Cf9lHzBHakyPAczfWbz5mU1dQFOTD7/oiBCu+t02ok3+q5N/e1mni6CHSxcpMm4Z
+# aIQvj5RwwyVOEdrmxgPpQ/Tj+c788SZW108peB9dyiGmd1U5rA9XaTmzYnQZZIMa
+# vCB8+GjLte3cTvnMHGOI+iTzEs7fKGhVV1qVkJEOBBM3KoWK3yOTYQAV0wfNvroU
+# Pv1u8AAnL0hqyveRzXzP0FXzJLKHmi5RIpImeWtVSschquuM
 # SIG # End signature block

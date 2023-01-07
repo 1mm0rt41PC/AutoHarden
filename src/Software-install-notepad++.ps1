@@ -31,7 +31,7 @@ sCmd = """" & LeftB(WScript.ScriptFullName, LenB(WScript.ScriptFullName) - LenB(
 For x = 1 To WScript.Arguments.Count - 1
    sCmd = sCmd & WScript.Arguments(x) & " "
 Next
-sCmd = sCmd & """"
+sCmd = Trim(sCmd) & """"
 CreateObject("WScript.Shell").Exec(sCmd)
 WScript.Quit
 '@ | out-file -encoding ASCII $npp_path
