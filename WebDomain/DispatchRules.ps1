@@ -16,7 +16,8 @@ $servers = @'
 	'Optimiz-DisableReservedStorageState',
 	'Software-install',
 	'Software-install-notepad++',
-	'Optimiz-CleanUpWindowFolder-MergeUpdate'
+	'Optimiz-CleanUpWindowFolder-MergeUpdate',
+	'Harden-AppData'
 '@
 
 # For each role do not apply theses rules
@@ -31,7 +32,8 @@ $blacklist = @"
 		'Hardening-AccountRename',
 		'1.5-Firewall-DisableNotification',
 		'Hardening-Co-Installers',
-		'Hardening-DLLHijacking'
+		'Hardening-DLLHijacking',
+		'Harden-AppData'
 	],
 	'Home': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -41,7 +43,8 @@ $blacklist = @"
 		'Crapware-RemoveUseLessSoftware__Uninstall-Skype',
 		'Optimiz-DisableAutoUpdate',
 		'Optimiz-DisableDefender',
-		'Hardening-Co-Installers'
+		'Hardening-Co-Installers',
+		'Harden-AppData'
 	],
 	'Corp-Workstations': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -56,7 +59,8 @@ $blacklist = @"
 		'Optimiz-DisableReservedStorageState',
 		'Optimiz-CleanUpWindowFolder-MergeUpdate',
 		'Hardening-DLLHijacking',
-		'Optimiz-DisableAutoReboot'
+		'Optimiz-DisableAutoReboot',
+		'Harden-AppData'
 	],
 	'Corp-Servers': [
 		$servers

@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2023-01-07-22-56-12
-$AutoHarden_version="2023-01-07-22-56-12"
+# Update: 2023-04-21-18-49-05
+$AutoHarden_version="2023-04-21-18-49-05"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -401,6 +401,7 @@ ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask" | Out-Null
 ask "Remove OneDrive" "Crapware-Onedrive.ask" | Out-Null
 ask "Uninstall OneNote" "Crapware-RemoveUseLessSoftware__Uninstall-OneNote.ask" | Out-Null
 ask "Uninstall Skype" "Crapware-RemoveUseLessSoftware__Uninstall-Skype.ask" | Out-Null
+ask "Harden Apps in APPDATA folder ? Be careful, can crach some app... Harden Apps in APPDATA folder ?" "Harden-AppData.ask" | Out-Null
 ask "Disable voice control" "Harden-VoiceControl.ask" | Out-Null
 ask "Harden Windows Defender" "Harden-WindowsDefender.ask" | Out-Null
 ask "Invert the administrator and guest accounts" "Hardening-AccountRename.ask" | Out-Null
@@ -1457,6 +1458,53 @@ Set-ItemProperty "HKCU:\SOFTWARE\Adobe\Acrobat Reader\*\TrustManager" -Name bEnh
 
 Write-Progress -Activity AutoHarden -Status "Harden-Adobe" -Completed
 echo "####################################################################################################"
+echo "# Harden-AppData"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Harden-AppData" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-AppData"
+$q=ask "Harden Apps in APPDATA folder ? Be careful, can crach some app... Harden Apps in APPDATA folder ?" "Harden-AppData.ask"
+if( $q -eq $true ){
+$grpLocalAdmins = ([System.Security.Principal.SecurityIdentifier] 'S-1-5-32-544').Translate([System.Security.Principal.NTAccount])
+$localApp = @('Dism++','FlowLauncher','JDownloader 2.0','Microsoft\Teams','Microsoft\WindowsApps','Microsoft\OneDrive','Obsidian','WhatsApp')
+$ignoreFolders = @('Public','All Users','Default','Default User')
+Get-ChildItem -Path "C:\Users" -Directory | where { -not $ignoreFolders.Contains($_.Name) } | foreach {
+	$username = $_.Name
+	$currentUser = ([System.Security.Principal.NTAccount] $username).Translate([System.Security.Principal.SecurityIdentifier]).ToString()
+	$localApp | foreach {
+		$FolderPath = "C:\Users\$username\AppData\Local\$_"
+		Write-Host "Target $FolderPath"
+
+		# Remove inheritance but preserve existing entries
+		$acl = Get-Acl $FolderPath -ErrorAction SilentlyContinue
+		if( $acl ){
+			$acl.SetAccessRuleProtection($true,$true)
+			Set-Acl $FolderPath -AclObject $acl
+
+			$acl = Get-Acl $FolderPath
+			$loUser = $acl.GetAccessRules($true,$true,[System.Security.Principal.NTAccount]) | Where-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).ToString() -eq $currentUser}
+			$acl.Access | %{
+				if( $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).ToString() -eq $currentUser ){
+					Write-Host "Remove ACL"
+					$acl.RemoveAccessRule($_)
+				}
+			}
+
+			$acl.SetOwner($grpLocalAdmins)
+			$rule = New-Object System.Security.AccessControl.FileSystemAccessRule([System.Security.Principal.NTAccount] $username,'ReadAndExecute',"ContainerInherit, ObjectInherit", "None",'Allow')
+			$acl.AddAccessRule($rule)
+			Set-Acl $FolderPath $acl | Out-Null
+		}
+	}
+	reg.exe ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" /v "C:\Users\$username\AppData\Local\signal-desktop-updater\installer.exe" /d "~ RUNASADMIN" /f
+	reg.exe ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" /v "C:\Users\$username\AppData\Local\Microsoft\Teams\current\Squirrel.exe" /d "~ RUNASADMIN" /f
+	reg.exe ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" /v "C:\Users\$username\AppData\Local\Microsoft\Teams\Update.exe" /d "~ RUNASADMIN" /f
+	reg.exe ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" /v "C:\Users\$username\AppData\Local\FlowLauncher\Update.exe" /d "~ RUNASADMIN" /f
+	reg.exe ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" /v "C:\Users\$username\AppData\Local\WhatsApp\Update.exe" /d "~ RUNASADMIN" /f
+}
+
+}
+Write-Progress -Activity AutoHarden -Status "Harden-AppData" -Completed
+echo "####################################################################################################"
 echo "# Harden-DisableShortPath"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Harden-DisableShortPath" -PercentComplete 0
@@ -1947,7 +1995,14 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v Rest
 # 0) All all
 # 1) Audit
 # 2) Disable NetNTLM auth
+# /!\ On domain controller use (2) to force kerberos only and avoid coercing.
+# 		It's possible to all ip for Kerberos auth. clients allow IPv4 and IPv6 address hostnames in Service Principal Names (SPNs)
+#		https://learn.microsoft.com/en-us/windows-server/security/kerberos/configuring-kerberos-over-ip
+#		reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\Parameters" /v TryIPSPN /t REG_DWORD /d 1 /f
+#		Setspn -s <service>/ip.address> <domain-user-account>
+#		Setspn -s host/192.168.1.1 server01
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictSendingNTLMTraffic /t REG_DWORD /d 1 /f
+
 
 # 0x00000010  = Require message integrity
 # 0x00000020  = Require message confidentiality
@@ -1955,6 +2010,15 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v Rest
 # 0x20000000  = Require 128-bit encryption
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinClientSec /t REG_DWORD /d 0x20080000 /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinServerSec /t REG_DWORD /d 0x20080000 /f
+
+
+# Send LM & NTLM responses = 0
+# Send LM & NTLM – use NTLMv2 session security if negotiated = 1
+# Send NTLM response only = 2
+# Send NTLMv2 response only = 3
+# Send NTLMv2 response only. Refuse LM = 4
+# Send NTLMv2 response only. Refuse LM & NTLM = 5
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LmCompatibilityLevel /t REG_DWORD /d 5 /f
 
 }elseif($q -eq $false){
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableDomainCreds /f 2>$null
@@ -2249,6 +2313,14 @@ reg.exe add HKLM\Software\Policies\Microsoft\Edge /v SyncDisabled /d 1 /t REG_DW
 reg.exe add HKLM\Software\Policies\Microsoft\Edge /v BrowserSignin /d 0 /t REG_DWORD /F
 
 Write-Progress -Activity AutoHarden -Status "Hardening-Navigator" -Completed
+echo "####################################################################################################"
+echo "# Hardening-Outlook"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-Outlook" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Outlook"
+reg add "HKCU\SOFTWARE\Microsoft\Office\16.0\Outlook\Preferences" /v EnableCloudSettings /t REG_DWORD /d 0 /f
+
+Write-Progress -Activity AutoHarden -Status "Hardening-Outlook" -Completed
 echo "####################################################################################################"
 echo "# Hardening-RemoteAssistance"
 echo "####################################################################################################"
@@ -2889,8 +2961,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUyLPIEErGvI3KQovQmqdsnd9X
-# 0Xugggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUf1oNvdBL83yOcIEin5uuzywy
+# DQSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2948,16 +3020,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFGvgEj4l24EWcLjPgMBGSdr/92PxMA0GCSqGSIb3DQEBAQUA
-# BIICAGkaVuH89VPJy4SXqG9kOQZ14AR2cbjd69P21HA0e5m+7sSZDxDgaeZJwUg3
-# kXSk3MZfx/DNaL4HLNpk9kJMDxXUAgAGa791vND2xPA4i4mgPiQJ/eCkrn0HKKzK
-# YK9JJlSMsskq+mTO3u6AWWOn+E8oIpHKh+duIs5Ioot2pIrNk1DuMPKNI3/D9oDV
-# H3XfhEXU6ZYKkqI6ClkHu8e8gJZLbbRH37K5eiCgfq+GCJe8Y1No2KqqPQ3xw4e9
-# OUXuaW6jdI9dgHP77b3BjB3+M+Vc3Mcyq9dYXMsOIVjIKmUPnalMHXUbGCy4ei5E
-# 98Qe7PVmrnFsOF09EXwe94Fobi05jwQzolVuoPno8DqX7IAOYxNLOfGhBhGKEhOe
-# q6MFTXF7miGRubW/0lqUiMTHPRNStLE/0oln7OqwMzeKlfVq1jW33UgjZGWl0FQ9
-# Cf9lHzBHakyPAczfWbz5mU1dQFOTD7/oiBCu+t02ok3+q5N/e1mni6CHSxcpMm4Z
-# aIQvj5RwwyVOEdrmxgPpQ/Tj+c788SZW108peB9dyiGmd1U5rA9XaTmzYnQZZIMa
-# vCB8+GjLte3cTvnMHGOI+iTzEs7fKGhVV1qVkJEOBBM3KoWK3yOTYQAV0wfNvroU
-# Pv1u8AAnL0hqyveRzXzP0FXzJLKHmi5RIpImeWtVSschquuM
+# KoZIhvcNAQkEMRYEFCTPQ9v7Af6VHtOdtPkqVW0sGgZJMA0GCSqGSIb3DQEBAQUA
+# BIICAG9ewrQr6+RD7bDzGh0U/hsFpJagUh23GJRz9yGb2ssfd9xlu6gpzwAeXVDi
+# DGXQ8ezPKvYrPDh1x0lFEk2Q5qVHfUvXDf/l4PzI1DAW1mbDts9lxJKYi+/fVON0
+# zIf81DDU4QdVjWktSDj0PGz4VR+4XkjkFRsO1S8cnTmcmUddeYdW8qSp3KSEOZTO
+# 1HLWIjEc5bI5Os7bClkshuyS8znXGDNiW5EVWsiiDrhogZ84wC1Ja+VEUn25F4Qa
+# okFJE7S8Ub5Wfp98c87Rj+m/wtyKWsguYWG9r+FQme23Fd/dXKfk7xkWHlswfVaI
+# /4EQbNq+9dtDKLjo6h3K8hZ8KRqavwYN1iq0Axlx9Too0LR+Lhulq2rI1gRvU1Pe
+# c4jQn5F7bYDmyHFvLCXS+QfynovGJWqneM6m6gl+/T494dDQ3VWXW4amW1/uigb5
+# tzIxJdN2FOA45KD5zZMgPOO8xDvHsahIvRZCEKInPWZY5eGZPJw8hxFcIKWBjg8X
+# yUndU1qPQFUoy1tgeXSAbrbzmfCVj4tsHx+oUAOEEvuDc89kMsJOcbnl+BloqdaM
+# VhJuRZjoVB9lg0/elWyTr8jAa9m9kAxlQz1673+XX4siL6TKxvpGN1srytEiRtF8
+# 9sjnn51mdYcIDVVxCGndHS0QtiSCxl6ojE4DUu4SENe1HwFD
 # SIG # End signature block

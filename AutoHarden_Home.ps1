@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2023-01-07-22-56-12
-$AutoHarden_version="2023-01-07-22-56-12"
+# Update: 2023-04-21-18-49-05
+$AutoHarden_version="2023-04-21-18-49-05"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -401,6 +401,7 @@ ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask" | Out-Null
 ask "Remove OneDrive" "Crapware-Onedrive.ask" | Out-Null
 ask "Uninstall OneNote" "Crapware-RemoveUseLessSoftware__Uninstall-OneNote.ask" | Out-Null
 ask "Uninstall Skype" "Crapware-RemoveUseLessSoftware__Uninstall-Skype.ask" | Out-Null
+ask "Harden Apps in APPDATA folder ? Be careful, can crach some app... Harden Apps in APPDATA folder ?" "Harden-AppData.ask" | Out-Null
 ask "Disable voice control" "Harden-VoiceControl.ask" | Out-Null
 ask "Harden Windows Defender" "Harden-WindowsDefender.ask" | Out-Null
 ask "Invert the administrator and guest accounts" "Hardening-AccountRename.ask" | Out-Null
@@ -1825,7 +1826,14 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v Rest
 # 0) All all
 # 1) Audit
 # 2) Disable NetNTLM auth
+# /!\ On domain controller use (2) to force kerberos only and avoid coercing.
+# 		It's possible to all ip for Kerberos auth. clients allow IPv4 and IPv6 address hostnames in Service Principal Names (SPNs)
+#		https://learn.microsoft.com/en-us/windows-server/security/kerberos/configuring-kerberos-over-ip
+#		reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\Parameters" /v TryIPSPN /t REG_DWORD /d 1 /f
+#		Setspn -s <service>/ip.address> <domain-user-account>
+#		Setspn -s host/192.168.1.1 server01
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v RestrictSendingNTLMTraffic /t REG_DWORD /d 1 /f
+
 
 # 0x00000010  = Require message integrity
 # 0x00000020  = Require message confidentiality
@@ -1833,6 +1841,15 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v Rest
 # 0x20000000  = Require 128-bit encryption
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinClientSec /t REG_DWORD /d 0x20080000 /f
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0" /v NTLMMinServerSec /t REG_DWORD /d 0x20080000 /f
+
+
+# Send LM & NTLM responses = 0
+# Send LM & NTLM – use NTLMv2 session security if negotiated = 1
+# Send NTLM response only = 2
+# Send NTLMv2 response only = 3
+# Send NTLMv2 response only. Refuse LM = 4
+# Send NTLMv2 response only. Refuse LM & NTLM = 5
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LmCompatibilityLevel /t REG_DWORD /d 5 /f
 
 }elseif($q -eq $false){
 reg delete "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableDomainCreds /f 2>$null
@@ -2127,6 +2144,14 @@ reg.exe add HKLM\Software\Policies\Microsoft\Edge /v SyncDisabled /d 1 /t REG_DW
 reg.exe add HKLM\Software\Policies\Microsoft\Edge /v BrowserSignin /d 0 /t REG_DWORD /F
 
 Write-Progress -Activity AutoHarden -Status "Hardening-Navigator" -Completed
+echo "####################################################################################################"
+echo "# Hardening-Outlook"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-Outlook" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-Outlook"
+reg add "HKCU\SOFTWARE\Microsoft\Office\16.0\Outlook\Preferences" /v EnableCloudSettings /t REG_DWORD /d 0 /f
+
+Write-Progress -Activity AutoHarden -Status "Hardening-Outlook" -Completed
 echo "####################################################################################################"
 echo "# Hardening-RemoteAssistance"
 echo "####################################################################################################"
@@ -2722,8 +2747,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU5QjB7Kvmg7qU5efI6UkXK8ln
-# eb6gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQURcrblk2fcHthnYZOUz400wK4
+# AIWgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2781,16 +2806,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFGIyNSVuxuCAJUbs82vWDuRRu0DYMA0GCSqGSIb3DQEBAQUA
-# BIICAEJDZ9Z8EhVUUDRXXJPqWYr/XXj5dt4igHMkkxeHsvb5WJScF2M1FvEiy7Ux
-# IZg0WwZ+EPYBCATvJS4EuZMXgXyOS0wcH5BqcvuDr08kIfmABEp/vQD8aScQkgGB
-# DmKvedoUGDYW73GYPgumHO9uueouDCnu2TxhihMJbNtW5/yOZ/Q2kjebR0/DiLNl
-# a6S3ZrwRfzEY0HuZMEx1di459vT+pzffFaTgXH7X7rIJdcs1OtDVIDXBhmGSKcMA
-# bqzap1HWxnffi0Lhn5T/KdbWi3tnvwuhp8hdQvc0739uJd/reimPeA/uzMzcQRmH
-# I/hYrP9+ubZCKah71arhkhjnjZOtznSxrl8WFpBpduFfTisMbFzgL5PMaP1PNF8U
-# CzqVLxVVQx7eovz+zX70OxfZSyrVsiu2oLdoPmB8l7wOBXCS6MIWVOTYBlLz5Jt8
-# Td18e/d8ai2LC8Dn5XPS2Vlu2oIwhB+v8I3BqOWgbdbdqR4OgTh89yRWKjoIUME2
-# OTtgYVxDQHbJ6+hHfSuEAbYTd12idiuSBx3FTdATMYiGxCHmksGb7qH7UewFyxXe
-# tPvYG2VuiQF6jn8QeKFjo6b0vtMGLrlDOsAYK4IxNTVd+vBETvJf3Mc58srQxJvH
-# vRV9GwQ7FuBYsMnETP7gID3HnJneyjFmykQp3gQwUXSyItV3
+# KoZIhvcNAQkEMRYEFL99FEoMJUymR03ShFZqkqJZ8tboMA0GCSqGSIb3DQEBAQUA
+# BIICAI4lcyMblZtFOJoD7+n7xRJbzDT/dLJ8ARGm1XUm/ocP/F6MYoArKinJ9c82
+# dlrLTNFxbo1xPRGGSqUBXFTBHBhac8QnUvf8WvQ2SpgtIwPmGMkS565lSkgT/l37
+# Vi9rtaTE8Ij50xxDpUexOtZ/LXWYhQtMKqScXIvMTT+suPgMF+woX0Ax/rB6XA3Y
+# 4n5HrtIdDNoNMRZdSW9GoZxrpRXXo5KPzggP/F2t0h79F6Zbt4iVusYW5fkp3CVE
+# hZR2oRDV5+EED87EaFfwo8kTwQ+etFZInDOw5nHvRqYRXWE8iBAwMRd5l6aRB8Z8
+# 9RpEiIVo1ygHHr1KY8TAP5PuOhFTG678f08455ItIheZM3TVO6rtTMobE3/V4TDk
+# aFNQcsveaUJA1t8zIwV+KuZE3ed5ZzczF9n9vupP9ofBqxiFD+olYm76VTpuqzV/
+# s2ASSUac2PPew+ao+xELafMV/vMI+jlRSUj2HWgHYwMnlyM93J3/QbLOFgeKAasy
+# DMatON6qsVBcrD/SPQGtdI2/ro8aFUg8nVjpF0D5eS1jLKFST0Zdh5sL2OMygiv4
+# ntIVcdH4VtuOzcSj4+zJ5CfsTAVerg7sca5O2X2XC2Q3TU2th1RH/OYZkVd5opvY
+# F6lVjVMca6GlxslP2NGALsBm49ayORnF//Oti8TDALPlYbMq
 # SIG # End signature block
