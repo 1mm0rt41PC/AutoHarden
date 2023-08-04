@@ -1950,6 +1950,10 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Loca
 # 2.3.17.1 UAC - Ensure 'User Account Control: Admin Approval Mode for the Built-in Administrator account' is set to 'Enabled'
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v FilterAdministratorToken /t REG_DWORD /d 1 /f
 
+# UAC - Ensure 'User Account Control: Consent prompt behavior' is set to '2' (2 = Prompt for username and password AND require secure desktop)
+# More information: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpsb/341747f5-6b5d-4d30-85fc-fa1cc04038d4
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f
+
 Write-Progress -Activity AutoHarden -Status "Hardening-DisableMimikatz" -Completed
 echo "####################################################################################################"
 echo "# Hardening-DisableMimikatz__CredentialsGuard"
