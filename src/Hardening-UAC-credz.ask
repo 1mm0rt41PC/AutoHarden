@@ -1,0 +1,1 @@
+When enabled, UAC prompts require both a valid username and a valid password to be entered in a secure desktop (default: interactive window proposes "deny" or "accept").
