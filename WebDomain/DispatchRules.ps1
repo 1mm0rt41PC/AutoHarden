@@ -1,6 +1,7 @@
 # @brief This script is used to auto link all rules in all role with the exception of the following listed options.
 $MyDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
 Get-ChildItem -Recurse -Force $MyDir\*\*.ps1 |where { $_.LinkType } | Remove-Item
+Get-ChildItem -Recurse -Force $MyDir\*\*.ask |where { $_.LinkType } | Remove-Item
 
 # For all servers, do not apply the following scripts
 $servers = @'
@@ -17,7 +18,8 @@ $servers = @'
 	'Software-install',
 	'Software-install-notepad++',
 	'Optimiz-CleanUpWindowFolder-MergeUpdate',
-	'Harden-AppData'
+	'Harden-AppData',
+	'Hardening-UAC-credz'
 '@
 
 # For each role do not apply theses rules
@@ -33,7 +35,8 @@ $blacklist = @"
 		'1.5-Firewall-DisableNotification',
 		'Hardening-Co-Installers',
 		'Hardening-DLLHijacking',
-		'Harden-AppData'
+		'Harden-AppData',
+		'Hardening-UAC-credz'
 	],
 	'Home': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -44,7 +47,8 @@ $blacklist = @"
 		'Optimiz-DisableAutoUpdate',
 		'Optimiz-DisableDefender',
 		'Hardening-Co-Installers',
-		'Harden-AppData'
+		'Harden-AppData',
+		'Hardening-UAC-credz'
 	],
 	'Corp-Workstations': [
 		'1.4-Firewall-BlockOutgoingSNMP',
@@ -60,7 +64,8 @@ $blacklist = @"
 		'Optimiz-CleanUpWindowFolder-MergeUpdate',
 		'Hardening-DLLHijacking',
 		'Optimiz-DisableAutoReboot',
-		'Harden-AppData'
+		'Harden-AppData',
+		'Hardening-UAC-credz'
 	],
 	'Corp-Servers': [
 		$servers
@@ -170,10 +175,16 @@ Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 	$blacklist.PSObject.Properties | Select Name | foreach {
 		$tragetFolder=(Get-Item $_.Name).FullName;
 		$tragetFolderName=$_.Name;
-		if( -not [System.IO.File]::Exists("$tragetFolder\$ps1Rule") ){
-			if( -not ($blacklist."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
+		if( -not ($blacklist."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
+			if( -not [System.IO.File]::Exists("$tragetFolder\$ps1Rule") ){
 				logInfo "[Blacklist] Create $tragetFolder\$ps1Rule"
 				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
+			}
+			$askFullpath = $FullName.Replace('.ps1','.ask')
+			$askName = $ps1Rule.Replace('.ps1','.ask')
+			if( [System.IO.File]::Exists($askFullpath) -and -not [System.IO.File]::Exists("$tragetFolder\$askName") ){
+				logInfo "[Blacklist] Create $tragetFolder\$askName"
+				New-Item -Path "$tragetFolder\$askName" -ItemType SymbolicLink -Value $askFullpath | Out-Null
 			}
 		}
 	}
@@ -184,6 +195,12 @@ Get-ChildItem $MyDir\..\src\*.ps1 | foreach {
 			if( ($whitelist."$tragetFolderName").Contains($ps1Rule.Replace('.ps1','')) ){
 				logInfo "[Whitelist]Create $tragetFolder\$ps1Rule"
 				New-Item -Path $tragetFolder\$ps1Rule -ItemType SymbolicLink -Value $FullName | Out-Null
+				$askFullpath = $FullName.Replace('.ps1','.ask')
+				$askName = $ps1Rule.Replace('.ps1','.ask')
+				if( [System.IO.File]::Exists($askFullpath) -and -not [System.IO.File]::Exists("$tragetFolder\$askName") ){
+					logInfo "[Blacklist] Create $tragetFolder\$askName"
+					New-Item -Path "$tragetFolder\$askName" -ItemType SymbolicLink -Value $askFullpath | Out-Null
+				}
 			}
 		}
 	}

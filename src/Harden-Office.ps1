@@ -39,3 +39,6 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -
 
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
+
+
+reg add HKCU\SOFTWARE\Microsoft\Office\16.0\Common\General /v SkipOpenAndSaveAsPlace /d 1 /t REG_DWORD /F

@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2023-04-21-18-49-05
-$AutoHarden_version="2023-04-21-18-49-05"
+# Update: 2023-08-09-00-59-33
+$AutoHarden_version="2023-08-09-00-59-33"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -395,17 +395,11 @@ ask "Block Internet communication for 'Internet Explorer' ?
 This filtering prevents viruses from downloading the payload.
 
 Block Internet communication for 'Internet Explorer'" "1.3-Firewall-IE.ask" | Out-Null
-ask "Disable SNMP communication (can break printers)" "1.4-Firewall-BlockOutgoingSNMP.ask" | Out-Null
 ask "Avoid sending notification to Users about the firewall" "1.5-Firewall-DisableNotification.ask" | Out-Null
 ask "Disable Cortana in Windows search bar" "Crapware-Cortana.ask" | Out-Null
-ask "Remove OneDrive" "Crapware-Onedrive.ask" | Out-Null
-ask "Uninstall OneNote" "Crapware-RemoveUseLessSoftware__Uninstall-OneNote.ask" | Out-Null
-ask "Uninstall Skype" "Crapware-RemoveUseLessSoftware__Uninstall-Skype.ask" | Out-Null
-ask "Harden Apps in APPDATA folder ? Be careful, can crach some app... Harden Apps in APPDATA folder ?" "Harden-AppData.ask" | Out-Null
 ask "Disable voice control" "Harden-VoiceControl.ask" | Out-Null
 ask "Harden Windows Defender" "Harden-WindowsDefender.ask" | Out-Null
 ask "Invert the administrator and guest accounts" "Hardening-AccountRename.ask" | Out-Null
-ask "Deny auto installation of vendor's application/drivers by the user" "Hardening-Co-Installers.ask" | Out-Null
 ask "Do you want to enable 'Credentials Guard' and disable VMWare/VirtualBox" "Hardening-DisableMimikatz__CredentialsGuard.ask" | Out-Null
 ask "Harden domain credential against hijacking ?
 WARNING If this Windows is a mobile laptop, this configuration will break this Windows !!!
@@ -414,8 +408,6 @@ Harden domain credential against hijacking" "Hardening-DisableMimikatz__Mimikatz
 ask "Block DLL from SMB share and WebDav Share" "Hardening-DLLHijacking.ask" | Out-Null
 ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask" | Out-Null
 ask "Show file extension and show windows title in the taskbar" "Optimiz-ClasicExplorerConfig.ask" | Out-Null
-ask "Disable auto Windows Update during work time" "Optimiz-DisableAutoUpdate.ask" | Out-Null
-ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask" | Out-Null
 ask "Replace notepad with notepad++" "Software-install-notepad++.ask" | Out-Null
 $global:asks_cache | Format-Table -Autosize
 logSuccess "All asks have been processed"
@@ -1400,6 +1392,9 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -
 
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
+
+
+reg add HKCU\SOFTWARE\Microsoft\Office\16.0\Common\General /v SkipOpenAndSaveAsPlace /d 1 /t REG_DWORD /F
 
 Write-Progress -Activity AutoHarden -Status "Harden-Office" -Completed
 echo "####################################################################################################"
@@ -2743,79 +2738,3 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 
 Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 
-
-# SIG # Begin signature block
-# MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
-# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQURcrblk2fcHthnYZOUz400wK4
-# AIWgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
-# AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
-# DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
-# hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
-# l1NergVq/3WmT8LDpaZ0XSpExZ7soHR3gs8eztnfe07r+Fl+W7l6lz3wUGFt52VY
-# 17WCa53tr5dYRPzYt2J6TWT874tqZqlo+lUl8ONK1roAww2flcDajm8VUXM0k0sL
-# M17H9NLykO3DeBuh2PVaXUxGDej+N8PsYF3/7Gv2AW0ZHGflrondcXb2/eh8xwbw
-# RENsGaMXvnGr9RWkufC6bKq31J8BBnP+/65M6541AueBoH8pLbANPZgHKES+8V9U
-# WlYKOeSoeBhtL1k3Rr8tfizRWx1zg/pBNL0WTOLcusmuJkdHkdHbHaW6Jc/vh06C
-# s6xqz9/Dkg+K3BvOmfwZfAjl+qdgzM8dUU8/GWhswngwLAz64nZ82mZv/Iw6egC0
-# rj5MYV0tpEjIgtVVgHavUfyXoIETNXFQR4SoK6PfeVkEzbRh03xhU65MSgBgWVv1
-# YbOtdgXK0MmCs3ngVPJdVaqBjgcrK++X3Kxasb/bOkcfQjff/EK+BPb/xs+pXEqr
-# yYbtbeX0v2rbV9cugPUj+mneucZBLFjuRcXhzVbXLrwXVne7yTD/sIKfe7dztzch
-# g19AY6/qkkRkroaKLASpfCAVx2LuCgeFGn//QaEtCpFxMo2dcnW2a+54pkzrCRTR
-# g1N2wBQFAgMBAAGjYjBgMBMGA1UdJQQMMAoGCCsGAQUFBwMDMEkGA1UdAQRCMECA
-# EPp+TbkVy9u5igk2CqcX2OihGjAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBghBr
-# xVMud93NnE/XjEko2+2HMA0GCSqGSIb3DQEBDQUAA4ICAQAQLtHeMr2qJnfhha2x
-# 2aCIApPjfHiHT4RNPI2Lq71jEbTpzdDFJQkKq4R3brGcpcnuU9VjUwz/BgKer+SF
-# pkwFwTHyJpEFkbGavNo/ez3bqoehvqlTYDJO/i2mK0fvKmShfne6dZT+ftLpZCP4
-# zngcANlp+kHy7mNRMB+LJv+jPc0kJ2oP4nIsLejyfxMj0lXuTJJRhxeZssdh0tq4
-# MZP5MjSeiE5/AMuKT12uJ6klNUFS+OlEpZyHkIpgy4HxflXSvhchJ9U1YXF2IQ47
-# WOrqwCXPUinHKZ8LwB0b0/35IlRCpub5KdRf803+4Okf9fL4rfc1cg9ZbLxuK9ne
-# Fg1+ESL4aPyoV03TbN7Cdsd/sfx4mJ8jXJD+AXZ1ZofAAapYf9J5C71ChCZlhIGB
-# vVc+dTUCWcUYgNOD9Nw+NiV6mARmVHl9SFL7yEtNYFgo0nWiNklqMqBLDxmrrD27
-# sgBpFUwbMZ52truQwaaSHD7hFb4Tb1B0JVaGoog3QfNOXaFeez/fAt5L+yo78cDm
-# 7Q2tXvy2g0xDAL/TXn7bhtDzQunltBzdULrJEQO4zI0h8YgmF88a0zYZ9HRkDUn6
-# dR9+G8TlZuUsWSOdvLdEvad9RqiHKeSrL6qgLBT5kqVt6AFsEtmFNz1s7xpsw/zP
-# ZvIXtQTmb4h+GcE/b2sUFZUkRDCCBRwwggMEoAMCAQICEGvFUy533c2cT9eMSSjb
-# 7YcwDQYJKoZIhvcNAQENBQAwGDEWMBQGA1UEAxMNQXV0b0hhcmRlbi1DQTAeFw0x
-# OTEwMjkyMTU1MDlaFw0zOTEyMzEyMzU5NTlaMBgxFjAUBgNVBAMTDUF1dG9IYXJk
-# ZW4tQ0EwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDZZvLb9iKlWoqy
-# D/dEZyLDZUGDzAL1MEXAujcPtEJb+erVnM7zJfSBdPodr1BefpZ0hJCTBganixWi
-# YEqPZTch3k3446qRHDFQcNZ15elUnzYoqw+3yU5Mmd65etz7DsG31gjw1tQLy7n2
-# IQYooz5StZOESRZIhWW2ZKXucrNLmOEFRY/mU2ltBANDJ3F9mGe++UJ1+xyTtB3z
-# HBxhk8Tj4QKiez6fiAa7O+ZWmgEnpCUk1bm+46rOWngKUJFFoCnpdX5itLQb9+XX
-# hNT+QAV4vip7s1gmQ1PM5yAwJ49as/unNtSiobJRHc2JUUpauJD3BfeuBhAsUbYK
-# tM9ac4Vf1rwSY1ozadxuXvI1H47gINrrRf8Xf4+xjVPL5ZQwFxY5eHM3NbGhmQ3F
-# PGv7msHijI6keFn8lKfx/5geyRSZThwRk0bM1mgFP+BNFfmyAlzSOWroJFdvXItB
-# 6LgRt1hXEIgOavtVNr2P7HFcjD5vGXnAntm/kg/4qT7RbKXDj0rUZuREIC+AlnVa
-# UppvPiUTtDXK0p0LTTwsDwU93OzizsGCwZfFh3CRtcjibULy479ZKDJiZB0dHYzg
-# 8fCIPX6gBSx9HOveBOlSW6Iw1Rqfy0UfS5yZ82JVgGKE90nD0PbnrIK+MfFUp6zO
-# nDBtwEkA/dkVVygg3qf0atvSF7b46QIDAQABo2IwYDATBgNVHSUEDDAKBggrBgEF
-# BQcDAzBJBgNVHQEEQjBAgBD6fk25FcvbuYoJNgqnF9jooRowGDEWMBQGA1UEAxMN
-# QXV0b0hhcmRlbi1DQYIQa8VTLnfdzZxP14xJKNvthzANBgkqhkiG9w0BAQ0FAAOC
-# AgEAwYg8KFYtmIVs5TFExOSR1FFJBpE2jFSn42ARYlB3kECGlLkqt3TET5X6Q0Us
-# 7d01uZn8HD3cMGrRNMXhjd6988kIJ8xBv7zFa8cJIHxXpFWLxOCWuedTEpMAANn7
-# kxxrEQfbRG065Gxq9+W12WMTqRh6WSInxRExQk+qzqYXg3cThFOmMi3iGIBnRgpi
-# krSd10pL6gYe6EOOTNPoql/coyTRqFIPlzC55OCvvu68SJP0hrVAbiKbAd5LJiLF
-# yJnpVMR8N8XupxpJJ3AJvcl+601NTNX6q8WqAYhr8fY5asQ1TCM8w4Gu7ylw7D/4
-# lJm+H3nkyKMu/koKhlrEr0Yi7egOQniEOV2k64Vjfpmxqur7xU2bnLWOi83bn8IZ
-# W2VxZn1Py57EaazNhM2H22vFWZpnzAQaZ2K8Oav93eX/TkpjZEUI7NB31Wm/W+OI
-# VjVHdkCesr4zOYHQd+u3pFWoC6VXW/+JsMyjpbKQ1C0pU+6wHrjnNZ48pbvNKWwR
-# QjYge9gJljW6hCuPBDZaFK++TYbkyie+JZY/jbeoPcw87F7hSAsiSC74BPI3vOxk
-# F6fu9dmkhqiQS4hkxY7kt1HLSfKnZX+c5F8OpjAedvzN0GIOryPtgGEXNhEF0b5v
-# GUpQymInafZmReNxHFxVZLZyvO8fkymFY530xqJny3wF6U4xggLNMIICyQIBATAs
-# MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
-# Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
-# MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFL99FEoMJUymR03ShFZqkqJZ8tboMA0GCSqGSIb3DQEBAQUA
-# BIICAI4lcyMblZtFOJoD7+n7xRJbzDT/dLJ8ARGm1XUm/ocP/F6MYoArKinJ9c82
-# dlrLTNFxbo1xPRGGSqUBXFTBHBhac8QnUvf8WvQ2SpgtIwPmGMkS565lSkgT/l37
-# Vi9rtaTE8Ij50xxDpUexOtZ/LXWYhQtMKqScXIvMTT+suPgMF+woX0Ax/rB6XA3Y
-# 4n5HrtIdDNoNMRZdSW9GoZxrpRXXo5KPzggP/F2t0h79F6Zbt4iVusYW5fkp3CVE
-# hZR2oRDV5+EED87EaFfwo8kTwQ+etFZInDOw5nHvRqYRXWE8iBAwMRd5l6aRB8Z8
-# 9RpEiIVo1ygHHr1KY8TAP5PuOhFTG678f08455ItIheZM3TVO6rtTMobE3/V4TDk
-# aFNQcsveaUJA1t8zIwV+KuZE3ed5ZzczF9n9vupP9ofBqxiFD+olYm76VTpuqzV/
-# s2ASSUac2PPew+ao+xELafMV/vMI+jlRSUj2HWgHYwMnlyM93J3/QbLOFgeKAasy
-# DMatON6qsVBcrD/SPQGtdI2/ro8aFUg8nVjpF0D5eS1jLKFST0Zdh5sL2OMygiv4
-# ntIVcdH4VtuOzcSj4+zJ5CfsTAVerg7sca5O2X2XC2Q3TU2th1RH/OYZkVd5opvY
-# F6lVjVMca6GlxslP2NGALsBm49ayORnF//Oti8TDALPlYbMq
-# SIG # End signature block

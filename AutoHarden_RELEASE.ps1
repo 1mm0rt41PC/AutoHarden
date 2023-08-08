@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2023-04-21-18-49-05
-$AutoHarden_version="2023-04-21-18-49-05"
+# Update: 2023-08-09-00-59-33
+$AutoHarden_version="2023-08-09-00-59-33"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -413,6 +413,7 @@ WARNING If this Windows is a mobile laptop, this configuration will break this W
 Harden domain credential against hijacking" "Hardening-DisableMimikatz__Mimikatz-DomainCredAdv.ask" | Out-Null
 ask "Block DLL from SMB share and WebDav Share" "Hardening-DLLHijacking.ask" | Out-Null
 ask "Disable Remote Assistance on this computer" "Hardening-RemoteAssistance.ask" | Out-Null
+ask "When enabled, UAC prompts require both a valid username and a valid password to be entered in a secure desktop (default: interactive window proposes 'deny' or 'accept')." "Hardening-UAC-credz.ask" | Out-Null
 ask "Show file extension and show windows title in the taskbar" "Optimiz-ClasicExplorerConfig.ask" | Out-Null
 ask "Disable auto Windows Update during work time" "Optimiz-DisableAutoUpdate.ask" | Out-Null
 ask "Disable WindowsDefender" "Optimiz-DisableDefender.ask" | Out-Null
@@ -1559,6 +1560,9 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Security" -Name AllowDDE -
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Office\*\*\Options\WordMail" -Name DontUpdateLinks -Value 1 -errorAction SilentlyContinue
 
+
+reg add HKCU\SOFTWARE\Microsoft\Office\16.0\Common\General /v SkipOpenAndSaveAsPlace /d 1 /t REG_DWORD /F
+
 Write-Progress -Activity AutoHarden -Status "Harden-Office" -Completed
 echo "####################################################################################################"
 echo "# Harden-RDP-Credentials"
@@ -2353,6 +2357,20 @@ powershell.exe Disable-WindowsOptionalFeature -Online -FeatureName smb1protocol
 
 Write-Progress -Activity AutoHarden -Status "Hardening-SMB" -Completed
 echo "####################################################################################################"
+echo "# Hardening-UAC-credz"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-UAC-credz" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-UAC-credz"
+$q=ask "When enabled, UAC prompts require both a valid username and a valid password to be entered in a secure desktop (default: interactive window proposes 'deny' or 'accept')." "Hardening-UAC-credz.ask"
+if( $q -eq $true ){
+# By https://github.com/starbuck3000
+# UAC - Ensure 'User Account Control: Consent prompt behavior' is set to '2' (2 = Prompt for username and password AND require secure desktop)
+# More information: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpsb/341747f5-6b5d-4d30-85fc-fa1cc04038d4
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f
+
+}
+Write-Progress -Activity AutoHarden -Status "Hardening-UAC-credz" -Completed
+echo "####################################################################################################"
 echo "# Hardening-UAC"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Hardening-UAC" -PercentComplete 0
@@ -2957,79 +2975,3 @@ if( [System.IO.File]::Exists("${AutoHardenTransScriptLog}.zip") ){
 
 Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 
-
-# SIG # Begin signature block
-# MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
-# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUf1oNvdBL83yOcIEin5uuzywy
-# DQSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
-# AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
-# DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
-# hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
-# l1NergVq/3WmT8LDpaZ0XSpExZ7soHR3gs8eztnfe07r+Fl+W7l6lz3wUGFt52VY
-# 17WCa53tr5dYRPzYt2J6TWT874tqZqlo+lUl8ONK1roAww2flcDajm8VUXM0k0sL
-# M17H9NLykO3DeBuh2PVaXUxGDej+N8PsYF3/7Gv2AW0ZHGflrondcXb2/eh8xwbw
-# RENsGaMXvnGr9RWkufC6bKq31J8BBnP+/65M6541AueBoH8pLbANPZgHKES+8V9U
-# WlYKOeSoeBhtL1k3Rr8tfizRWx1zg/pBNL0WTOLcusmuJkdHkdHbHaW6Jc/vh06C
-# s6xqz9/Dkg+K3BvOmfwZfAjl+qdgzM8dUU8/GWhswngwLAz64nZ82mZv/Iw6egC0
-# rj5MYV0tpEjIgtVVgHavUfyXoIETNXFQR4SoK6PfeVkEzbRh03xhU65MSgBgWVv1
-# YbOtdgXK0MmCs3ngVPJdVaqBjgcrK++X3Kxasb/bOkcfQjff/EK+BPb/xs+pXEqr
-# yYbtbeX0v2rbV9cugPUj+mneucZBLFjuRcXhzVbXLrwXVne7yTD/sIKfe7dztzch
-# g19AY6/qkkRkroaKLASpfCAVx2LuCgeFGn//QaEtCpFxMo2dcnW2a+54pkzrCRTR
-# g1N2wBQFAgMBAAGjYjBgMBMGA1UdJQQMMAoGCCsGAQUFBwMDMEkGA1UdAQRCMECA
-# EPp+TbkVy9u5igk2CqcX2OihGjAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBghBr
-# xVMud93NnE/XjEko2+2HMA0GCSqGSIb3DQEBDQUAA4ICAQAQLtHeMr2qJnfhha2x
-# 2aCIApPjfHiHT4RNPI2Lq71jEbTpzdDFJQkKq4R3brGcpcnuU9VjUwz/BgKer+SF
-# pkwFwTHyJpEFkbGavNo/ez3bqoehvqlTYDJO/i2mK0fvKmShfne6dZT+ftLpZCP4
-# zngcANlp+kHy7mNRMB+LJv+jPc0kJ2oP4nIsLejyfxMj0lXuTJJRhxeZssdh0tq4
-# MZP5MjSeiE5/AMuKT12uJ6klNUFS+OlEpZyHkIpgy4HxflXSvhchJ9U1YXF2IQ47
-# WOrqwCXPUinHKZ8LwB0b0/35IlRCpub5KdRf803+4Okf9fL4rfc1cg9ZbLxuK9ne
-# Fg1+ESL4aPyoV03TbN7Cdsd/sfx4mJ8jXJD+AXZ1ZofAAapYf9J5C71ChCZlhIGB
-# vVc+dTUCWcUYgNOD9Nw+NiV6mARmVHl9SFL7yEtNYFgo0nWiNklqMqBLDxmrrD27
-# sgBpFUwbMZ52truQwaaSHD7hFb4Tb1B0JVaGoog3QfNOXaFeez/fAt5L+yo78cDm
-# 7Q2tXvy2g0xDAL/TXn7bhtDzQunltBzdULrJEQO4zI0h8YgmF88a0zYZ9HRkDUn6
-# dR9+G8TlZuUsWSOdvLdEvad9RqiHKeSrL6qgLBT5kqVt6AFsEtmFNz1s7xpsw/zP
-# ZvIXtQTmb4h+GcE/b2sUFZUkRDCCBRwwggMEoAMCAQICEGvFUy533c2cT9eMSSjb
-# 7YcwDQYJKoZIhvcNAQENBQAwGDEWMBQGA1UEAxMNQXV0b0hhcmRlbi1DQTAeFw0x
-# OTEwMjkyMTU1MDlaFw0zOTEyMzEyMzU5NTlaMBgxFjAUBgNVBAMTDUF1dG9IYXJk
-# ZW4tQ0EwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDZZvLb9iKlWoqy
-# D/dEZyLDZUGDzAL1MEXAujcPtEJb+erVnM7zJfSBdPodr1BefpZ0hJCTBganixWi
-# YEqPZTch3k3446qRHDFQcNZ15elUnzYoqw+3yU5Mmd65etz7DsG31gjw1tQLy7n2
-# IQYooz5StZOESRZIhWW2ZKXucrNLmOEFRY/mU2ltBANDJ3F9mGe++UJ1+xyTtB3z
-# HBxhk8Tj4QKiez6fiAa7O+ZWmgEnpCUk1bm+46rOWngKUJFFoCnpdX5itLQb9+XX
-# hNT+QAV4vip7s1gmQ1PM5yAwJ49as/unNtSiobJRHc2JUUpauJD3BfeuBhAsUbYK
-# tM9ac4Vf1rwSY1ozadxuXvI1H47gINrrRf8Xf4+xjVPL5ZQwFxY5eHM3NbGhmQ3F
-# PGv7msHijI6keFn8lKfx/5geyRSZThwRk0bM1mgFP+BNFfmyAlzSOWroJFdvXItB
-# 6LgRt1hXEIgOavtVNr2P7HFcjD5vGXnAntm/kg/4qT7RbKXDj0rUZuREIC+AlnVa
-# UppvPiUTtDXK0p0LTTwsDwU93OzizsGCwZfFh3CRtcjibULy479ZKDJiZB0dHYzg
-# 8fCIPX6gBSx9HOveBOlSW6Iw1Rqfy0UfS5yZ82JVgGKE90nD0PbnrIK+MfFUp6zO
-# nDBtwEkA/dkVVygg3qf0atvSF7b46QIDAQABo2IwYDATBgNVHSUEDDAKBggrBgEF
-# BQcDAzBJBgNVHQEEQjBAgBD6fk25FcvbuYoJNgqnF9jooRowGDEWMBQGA1UEAxMN
-# QXV0b0hhcmRlbi1DQYIQa8VTLnfdzZxP14xJKNvthzANBgkqhkiG9w0BAQ0FAAOC
-# AgEAwYg8KFYtmIVs5TFExOSR1FFJBpE2jFSn42ARYlB3kECGlLkqt3TET5X6Q0Us
-# 7d01uZn8HD3cMGrRNMXhjd6988kIJ8xBv7zFa8cJIHxXpFWLxOCWuedTEpMAANn7
-# kxxrEQfbRG065Gxq9+W12WMTqRh6WSInxRExQk+qzqYXg3cThFOmMi3iGIBnRgpi
-# krSd10pL6gYe6EOOTNPoql/coyTRqFIPlzC55OCvvu68SJP0hrVAbiKbAd5LJiLF
-# yJnpVMR8N8XupxpJJ3AJvcl+601NTNX6q8WqAYhr8fY5asQ1TCM8w4Gu7ylw7D/4
-# lJm+H3nkyKMu/koKhlrEr0Yi7egOQniEOV2k64Vjfpmxqur7xU2bnLWOi83bn8IZ
-# W2VxZn1Py57EaazNhM2H22vFWZpnzAQaZ2K8Oav93eX/TkpjZEUI7NB31Wm/W+OI
-# VjVHdkCesr4zOYHQd+u3pFWoC6VXW/+JsMyjpbKQ1C0pU+6wHrjnNZ48pbvNKWwR
-# QjYge9gJljW6hCuPBDZaFK++TYbkyie+JZY/jbeoPcw87F7hSAsiSC74BPI3vOxk
-# F6fu9dmkhqiQS4hkxY7kt1HLSfKnZX+c5F8OpjAedvzN0GIOryPtgGEXNhEF0b5v
-# GUpQymInafZmReNxHFxVZLZyvO8fkymFY530xqJny3wF6U4xggLNMIICyQIBATAs
-# MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
-# Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
-# MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFCTPQ9v7Af6VHtOdtPkqVW0sGgZJMA0GCSqGSIb3DQEBAQUA
-# BIICAG9ewrQr6+RD7bDzGh0U/hsFpJagUh23GJRz9yGb2ssfd9xlu6gpzwAeXVDi
-# DGXQ8ezPKvYrPDh1x0lFEk2Q5qVHfUvXDf/l4PzI1DAW1mbDts9lxJKYi+/fVON0
-# zIf81DDU4QdVjWktSDj0PGz4VR+4XkjkFRsO1S8cnTmcmUddeYdW8qSp3KSEOZTO
-# 1HLWIjEc5bI5Os7bClkshuyS8znXGDNiW5EVWsiiDrhogZ84wC1Ja+VEUn25F4Qa
-# okFJE7S8Ub5Wfp98c87Rj+m/wtyKWsguYWG9r+FQme23Fd/dXKfk7xkWHlswfVaI
-# /4EQbNq+9dtDKLjo6h3K8hZ8KRqavwYN1iq0Axlx9Too0LR+Lhulq2rI1gRvU1Pe
-# c4jQn5F7bYDmyHFvLCXS+QfynovGJWqneM6m6gl+/T494dDQ3VWXW4amW1/uigb5
-# tzIxJdN2FOA45KD5zZMgPOO8xDvHsahIvRZCEKInPWZY5eGZPJw8hxFcIKWBjg8X
-# yUndU1qPQFUoy1tgeXSAbrbzmfCVj4tsHx+oUAOEEvuDc89kMsJOcbnl+BloqdaM
-# VhJuRZjoVB9lg0/elWyTr8jAa9m9kAxlQz1673+XX4siL6TKxvpGN1srytEiRtF8
-# 9sjnn51mdYcIDVVxCGndHS0QtiSCxl6ojE4DUu4SENe1HwFD
-# SIG # End signature block

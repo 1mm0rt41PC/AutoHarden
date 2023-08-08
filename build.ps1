@@ -69,7 +69,7 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 	Write-Host '[i] Reading asks files'
 	toBuff '####################################################################################################'
 	toBuff 'logInfo "Asking questions for the configuration"'
-	Get-ChildItem ${PSScriptRoot}\src\*.ask | foreach {
+	Get-ChildItem $WebDomainPath\*.ask | foreach {
 		toBuff ('ask "'+(cat $_.FullName | out-string).Trim().Replace('"',"'")+'" "'+$_.Name+'" | Out-Null')
 	}
 	toBuff '$global:asks_cache | Format-Table -Autosize'
