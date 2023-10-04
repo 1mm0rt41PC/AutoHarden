@@ -1,5 +1,6 @@
 ##############################################################################
 # Enable sysmon
+<#
 if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 	chocoInstall sysmon
 	$sysmonconfig = curl.exe $AutoHarden_SysmonUrl
@@ -9,11 +10,15 @@ if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 		sysmon.exe -accepteula -c C:\Windows\sysmon.xml
 	}
 }
-
+#>
+sysmon.exe -accepteula -u
+choco uninstall sysmon -y
+del /Q /F C:\Windows\Sysmon.exe
 
 ##############################################################################
 # Log all autoruns to detect malware
 # From: https://github.com/palantir/windows-event-forwarding/
+<#
 if( Get-Command autorunsc -errorAction SilentlyContinue ){
 	$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
 	Start-Job -Name LogActivity_autoruns -scriptblock {
@@ -25,3 +30,4 @@ if( Get-Command autorunsc -errorAction SilentlyContinue ){
 		}
 	} -Arg $autorunsc7z
 }
+#>

@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2023-08-09-01-03-25
-$AutoHarden_version="2023-08-09-01-03-25"
+# Update: 2023-10-04-10-35-12
+$AutoHarden_version="2023-10-04-10-35-12"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -2824,6 +2824,7 @@ Write-Progress -Activity AutoHarden -Status "Software-install-Logs" -PercentComp
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Software-install-Logs"
 ##############################################################################
 # Enable sysmon
+<#
 if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 	chocoInstall sysmon
 	$sysmonconfig = curl.exe $AutoHarden_SysmonUrl
@@ -2833,11 +2834,15 @@ if( -not (Get-Command sysmon -errorAction SilentlyContinue) ){
 		sysmon.exe -accepteula -c C:\Windows\sysmon.xml
 	}
 }
-
+#>
+sysmon.exe -accepteula -u
+choco uninstall sysmon -y
+del /Q /F C:\Windows\Sysmon.exe
 
 ##############################################################################
 # Log all autoruns to detect malware
 # From: https://github.com/palantir/windows-event-forwarding/
+<#
 if( Get-Command autorunsc -errorAction SilentlyContinue ){
 	$autorunsc7z = ("${AutoHarden_Logs}\autorunsc_"+(Get-Date -Format "yyyy-MM-dd"))
 	Start-Job -Name LogActivity_autoruns -scriptblock {
@@ -2849,6 +2854,7 @@ if( Get-Command autorunsc -errorAction SilentlyContinue ){
 		}
 	} -Arg $autorunsc7z
 }
+#>
 
 Write-Progress -Activity AutoHarden -Status "Software-install-Logs" -Completed
 echo "####################################################################################################"
@@ -2979,8 +2985,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUafcDoXUrB4Gk2UCeNrKBl3M3
-# ryOgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUbgvlGvbSRdfCTI8Yhb/RJ8wW
+# uVSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -3038,16 +3044,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFFGF+FhZZEqCRNl+VBPeM+u7uNqoMA0GCSqGSIb3DQEBAQUA
-# BIICAHq3noZdqP/4NHVc+jJHyvFpKMDeU8mOg5yC6JR53Q3vJO1RsJcQIuyLg0Ra
-# d3990W7Jnum3qW2iap5n45bHpYg9Ao0IFE0R3um1W50DG38AgXVQbn8QyTgTfTJx
-# 5EsjcvQ/go0CgIrJjrMzIDVvE7pxzPnnQxf9Mi7/ya6QeWippk/YVFpXVrQ0bR5q
-# DAZW57A3Rbe3rd09GZRiJPJfJHAh+wE6cSxhnVP7atLEY9H8Kyy3ebpP3SDEOFLW
-# hpovMzKsfebDB7ZpvCr5Neg8t+O+I3kKWys5/vKEUTgOsUZbtms9YtupTgOtASV8
-# +WWpd7rmH+OICiVZKx6DhyRhMjaDodEdmB2H0qXudu9/JEGXpypK1aS6qMjwuqBh
-# 3Oj0JssKEukfj6i1c215pUfpdC9zFG+ax1VEoU8JwRPMr9n4W37DSODCv5029dVM
-# JYoNBFR+dVmtvN8JoY5fkcaQ72zj7P4sdQIz//YhL4MffvTa3pwR8WxPm+wwqYro
-# HKFBbqT8Y9UEhgnYckvXJee87zU6p1+9OQy3cO5tHbxTmdaR806GQzRev+jbfEI1
-# A8gR2AGHgYZkMlwcc1i53BTvrhXdbbAFZO4I9pp420ynaaj1xCzkJwYDwx+o3w0b
-# /scj0UM+iJiIZK2HnP71JMWfDOmzbM5ETIaNuRF+s1DkfmAd
+# KoZIhvcNAQkEMRYEFDMh00aJi7OopPuU1NSBJVQDt+JXMA0GCSqGSIb3DQEBAQUA
+# BIICAArU+chZybwBVSUi35sZOecst3JZjpCB1e5D8RPnBUC+n62iM+LBalY3sSaa
+# XISugHvimc/pBJqh/P28JEGZnRDDDGwynJbwLIHVoAD30Z2VGGNdhts2iJWP4N0U
+# VB2ogXyrLnhicMSpAhu7AdinXzvzrfNvOlDMzmDOtVEjiqQ3ZLf6dIP35PeW42Cs
+# QTEpbK4E1zECQWUFndNGY1XZ3rtZ29BiY5b8lftg3ykV1n2Qau3HwRxhAM+ZSMMV
+# 3vX6bLbbRGH8SJmA2f5x3BvkAuYcKwUoszakDCwfBRISFyTCDohixHYXoQFOfPp7
+# r4Btrn00QO3El/Rva+4meXzINJluamKGuylB9Y+EnZdHmthdjKtVQqTsjOT5NlzD
+# 2d7PH+2Eai7WoqjLma7D9Pg9xmpx+VtWS1adkGVYjpJq4rrkM9SqSbxlHmVrh6hE
+# YdaCGhnlnICfcvgoEn6hCw+VRQk2aRDhfe6BN2bN/zglF9ZbAAeP8ZR9GHSjfm3o
+# 3gdHc3z6gwNu4Jja8CXbl5/vx5/0JKuvoDaUNt7SmZtspDLO4xBgX4Kx1oImkUOt
+# 4HoRUVKHcCOnW2fI0tZ2szpy6xCE+j2xIzoTZpv31rrmvCNUUWCOGBzEofUB11dC
+# 3UDRpqQsrHjvSziC/+aHTHF0GJqbToSNSAGtvd8DDqL9axjP
 # SIG # End signature block
