@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2024-07-16-11-37-46
-$AutoHarden_version="2024-07-16-11-37-46"
+# Update: 2024-07-16-15-52-52
+$AutoHarden_version="2024-07-16-15-52-52"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -765,27 +765,53 @@ Write-Host -BackgroundColor Blue -ForegroundColor White "Running 1.1-Firewall-Ma
 $q=ask "Block Internet communication for evil tools ?
 This filtering prevents viruses from downloading the payload." "1.1-Firewall-Malware.ask"
 if( $q -eq $true ){
-#	blockExe "Windows Defender" "C:\ProgramData\Microsoft\Windows Defender\platform\*\MpCmdRun.exe",# Fixed in the latest version of Defender
-#	https://malware.news/t/a-deep-dive-into-rundll32-exe/43840
-#	blockExe "Rundll32" "C:\Windows\System32\rundll32.exe",
-
 @(
 	@{ Name='Intel Graphics Control Panel'; blockExe="C:\Windows\System32\driverstore\filerepository\*\GfxDownloadWrapper.exe" },
+	@{ Name='Microsoft.Workflow.Compiler';  blockExe="C:\Windows\Microsoft.NET\Framework*\*\Microsoft.Workflow.Compiler.exe" },
 	@{ Name='Presentationhost'; blockExe="C:\Windows\Sys*\Presentationhost.exe" },
-	@{ Name='Dfsvc'; blockExe="C:\Windows\Microsoft.NET\*\*\Dfsvc.exe" },
-	@{ Name='IEexec'; blockExe="C:\Windows\Microsoft.NET\*\*\ieexec.exe" },
-	@{ Name='HH'; blockExe=@("C:\Windows\*\hh.exe","C:\Windows\hh.exe") },
-	@{ Name='CertUtil'; blockExe="C:\Windows\System32\certutil.exe" },
-	@{ Name='Mshta'; blockExe="C:\Windows\System32\mshta.exe" },
-	@{ Name='BitsAdmin'; blockExe="C:\Windows\System32\BitsAdmin.exe" },
-	@{ Name='CScript'; blockExe="C:\Windows\System32\cscript.exe" },
-	@{ Name='WScript'; blockExe="C:\Windows\System32\wscript.exe" },
-	@{ Name='Cmdl32'; blockExe="C:\Windows\System32\Cmdl32.exe" },# https://twitter.com/ElliotKillick/status/1455897435063074824?t=5m5_Y1SRhLnd_UN6YktuVQ&s=09
+	@{ Name='Dfsvc';            blockExe="C:\Windows\Microsoft.NET\Framework*\*\Dfsvc.exe" },
+	@{ Name='IEexec';           blockExe="C:\Windows\Microsoft.NET\Framework*\*\ieexec.exe" },
+	@{ Name='Csc';              blockExe="C:\Windows\Microsoft.NET\Framework*\*\csc.exe" },
+	@{ Name='Msbuild';          blockExe="C:\Windows\Microsoft.NET\Framework*\*\msbuild.exe" },
+	@{ Name='Regsvcs';          blockExe="C:\Windows\Microsoft.NET\Framework*\*\regsvcs.exe" },
+	@{ Name='AddinUtil';        blockExe="C:\Windows\Microsoft.NET\Framework*\*\AddinUtil.exe" },
+	@{ Name='InstallUtil';      blockExe="C:\Windows\Microsoft.NET\Framework*\*\InstallUtil.exe" },
+	@{ Name='aspnet_compiler';  blockExe="C:\Windows\Microsoft.NET\Framework*\*\aspnet_compiler.exe" },
+	@{ Name='ngen';         blockExe="C:\Windows\Microsoft.NET\Framework*\*\ngen.exe" },
+	@{ Name='HH';           blockExe=@("C:\Windows\*\hh.exe","C:\Windows\hh.exe") },	
+	@{ Name='CertUtil';     blockExe="C:\Windows\Sys*\certutil.exe" },
+	@{ Name='Mshta';        blockExe="C:\Windows\Sys*\mshta.exe" },
+	@{ Name='BitsAdmin';    blockExe="C:\Windows\Sys*\BitsAdmin.exe" },
+	@{ Name='CScript';      blockExe="C:\Windows\Sys*\cscript.exe" },
+	@{ Name='WScript';      blockExe="C:\Windows\Sys*\wscript.exe" },
+	@{ Name='Cmstp';        blockExe="C:\Windows\Sys*\cmstp.exe" },
+	@{ Name='WmiC';         blockExe="C:\windows\*\wbem\wmic.exe" },# https://github.com/api0cradle/UltimateAppLockerByPassList/blob/master/md/Cmstp.exe.md
+	@{ Name='Cmdl32';       blockExe="C:\Windows\Sys*\Cmdl32.exe" },# https://twitter.com/ElliotKillick/status/1455897435063074824?t=5m5_Y1SRhLnd_UN6YktuVQ&s=09
+	@{ Name='Control';      blockExe="C:\Windows\Sys*\control.exe" },# https://github.com/api0cradle/UltimateAppLockerByPassList/blob/master/md/Control.exe.md
+	@{ Name='Atbroker';     blockExe="C:\Windows\Sys*\Atbroker.exe" },
+	@{ Name='Bash';         blockExe="C:\Windows\Sys*\bash.exe" },
+	@{ Name='Cmdkey';       blockExe="C:\Windows\Sys*\cmdkey.exe" },
+	@{ Name='Ie4uinit';     blockExe="C:\Windows\Sys*\ie4uinit.exe" },
+	@{ Name='Psr';          blockExe="C:\Windows\Sys*\Psr.exe" },
+	@{ Name='Pcalua';       blockExe="C:\Windows\Sys*\Pcalua.exe" },
+	@{ Name='certoc';       blockExe="C:\Windows\Sys*\certoc.exe" },
+	@{ Name='CertReq';      blockExe="C:\Windows\Sys*\CertReq.exe" },
+	@{ Name='Regasm';       blockExe="C:\Windows\Sys*\regasm.exe" },
+	@{ Name='Regsvr32';     blockExe="C:\Windows\Sys*\Regsvr32.exe" },
+	@{ Name='Rundll32';     blockExe="C:\Windows\Sys*\Rundll32.exe" },
+	@{ Name='Xwizard';      blockExe="C:\Windows\Sys*\xwizard.exe" },
+	@{ Name='Mavinject';    blockExe="C:\Windows\Sys*\mavinject.exe" },
+	@{ Name='Msdt';         blockExe="C:\Windows\Sys*\Msdt.exe" },
+	@{ Name='Msiexec';      blockExe="C:\Windows\Sys*\msiexec.exe" },
+	@{ Name='Odbcconf';     blockExe="C:\Windows\Sys*\odbcconf.exe" },
+	@{ Name='Pcwrun';       blockExe="C:\Windows\Sys*\Pcwrun.exe" },
+	@{ Name='Scriptrunner'; blockExe="C:\Windows\Sys*\Scriptrunner.exe" },
+	@{ Name='SyncAppvPublishingServer';    blockExe="C:\Windows\Sys*\SyncAppvPublishingServer.exe" },
+	@{ Name='Register-cimprovider';        blockExe="C:\Windows\Sys*\Register-cimprovider.exe" },
+	@{ Name='InfDefaultInstall';           blockExe="C:\Windows\Sys*\InfDefaultInstall.exe" },
 	@{ Name='Powershell'; blockExe=@(
-		"C:\Windows\WinSxS\*\powershell.exe",
-		"C:\Windows\WinSxS\*\PowerShell_ISE.exe",
-		"C:\Windows\*\WindowsPowerShell\v1.0\powershell.exe",
-		"C:\Windows\*\WindowsPowerShell\v1.0\PowerShell_ISE.exe"
+		"C:\Windows\WinSxS\*_microsoft-windows-*powershell-exe_*\powershell*.exe",
+		"C:\Windows\*\WindowsPowerShell\v1.0\powershell*.exe"
 	) }
 ) | foreach {
 	FWRule @{
@@ -1016,7 +1042,9 @@ echo "##########################################################################
 Write-Progress -Activity AutoHarden -Status "2-Hardening-Powershell" -PercentComplete 0
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running 2-Hardening-Powershell"
 # Disable Powershellv2
+DISM /Online /Disable-Feature:MicrosoftWindowsPowerShellV2 /NoRestart
 DISM /Online /Disable-Feature:MicrosoftWindowsPowerShellV2Root /NoRestart
+Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2 -NoRestart > $null
 Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart > $null
 
 Write-Progress -Activity AutoHarden -Status "2-Hardening-Powershell" -Completed
@@ -2141,6 +2169,9 @@ cmd /c ftype diffile="%systemroot%\system32\notepad.exe" "%1"
 # CVE-2020-0765 impacting Remote Desktop Connection Manager (RDCMan) configuration files - MS won't fix
 cmd /c ftype rdgfile="%systemroot%\system32\notepad.exe" "%1"
 
+
+reg delete "HKCU:\Software\Classes\ms-appinstaller" /v "URL Protocol"
+
 Write-Progress -Activity AutoHarden -Status "Hardening-FileExtension" -Completed
 echo "####################################################################################################"
 echo "# Hardening-LDAP"
@@ -2805,8 +2836,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU2W/Axmdyi6xHpVAleCO7UMgF
-# xw+gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzEXvoBWw0zLKDaLk3nhM3YrO
+# 1MSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2864,16 +2895,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFOoLY0iuu1zYwyyR69QOjXWEtxs4MA0GCSqGSIb3DQEBAQUA
-# BIICAGdjnTx9rXuA8F47jKAZ2ahuUiTsmonMqUsa7WuP49wJ7llGu6tOj9im82+x
-# O/ArbZ2X2hGgnYHsP/hqwh6riPOA50f6RAkW0kJdsF/E07zWuq2RzamrtpLJHDgq
-# DukWob3aeOHnLzF3mUf7O3tCbGAcsPh/uZu50s18UQu/AIwHsd40y3/v8qK5E4iZ
-# tuVxmNdXZFBaOlR8PXrs+/OSUEJ0spfIZ2jCF0h5JTDpD9kLUjirGjUmm8AOXjG8
-# 4/mI9TDnrgNoy8zDOWHJDgE+WfRiSkEJs4JIncIcYv3lPleaczuidX24OqegbRRa
-# ST02fk2p+Er2liT4t3p1GTvXyMIxoMM9xQgjJjLk+hoUxMyCgxix5RRGfr5G8v8K
-# L+6XBO6+tA5d7+2wOsYzBmrTsjCYNhKYf+puXlkd1k7wU52qaHuX8Pz+iCMLeBXX
-# rnTqAajaHSDayIs7eUEXYjzo8QdaehHWuBWfRviqsRQ1VA4NNO5DxxP9+IzlpWeP
-# E+fuxPpn0CzYMulmZwkuVfBVmumgkHamkGdpl92ufbB9Od11KUioqhN/IVKRL4vr
-# LuzOMFPW9s2hGtytnK9LGP+fJynyo/hXcN5GcjEcHXc1MCl8OR+lJnntioT3WSGQ
-# uJaPzEQeGQwBO25OvmmO2i1yb+xEhEBuTWdi4rSfhWHrPcbB
+# KoZIhvcNAQkEMRYEFCyZ+ziMjzXgFGkb3t7Qy6aAFMHVMA0GCSqGSIb3DQEBAQUA
+# BIICAHUg4OqRXkp21SRp7ROlDP+2x1W2+Hl0kl148K+ffENMkJaNbJspIPWh1nbA
+# l+8NVgOmeubgOL0FojJ42a2kzQVdcXYta+aZrGpenTonmPokcAoJgzG1uHRWEF3L
+# rdtfYMp8EWn7Ov9/L9nthXrGbYfLZ2RXVwiUa27J/KSpWsxpjJgJKauWKjVuLcrS
+# 443oMLn6eq+LrjIpmQCFzhRYrXZAedzbIyIRhmQuOuqlzZHIOLF+7IasCwQiv/DM
+# IJxEZuH2y2oqbLCZp3i5BHh1811nDXladRelt5XYw35JoyS8sAoGUl+06KIDg6pg
+# opYZH0V9kcxVrsPp2UhcFilI5+S0SUpn2P8kF3AHo5wNHmwlb+DTeYsYWw3X902I
+# /AKHRnNfxzSggcWU1acNuBRal3WrA9vDxwfsZ0MGNwLJTbmY1tbr/CQlg/3ACySs
+# MPmGtqTzXbtIQ6Jf3hmpqLof7iVOLtInkGPDn5n4QQbSxtVS0dEEmbVzH3kLl0cu
+# xflMn6E8KXAOjbgm6Y21Qn6ExrgCmjJAqacoKnj3VYp6Fn9HfBT0KceWuT+RdERi
+# 4YC23O2xT/Vxzfct/0xjXywueG8AqLMH4sj16/1y34WUakYVauZG5dzqnTZGNneM
+# Igz6FYEkLISg+EfT0+qnTec7wD7B1FJStclizwYT7vkkD/p7
 # SIG # End signature block

@@ -48,3 +48,6 @@ cmd /c ftype diffile="%systemroot%\system32\notepad.exe" "%1"
 
 # CVE-2020-0765 impacting Remote Desktop Connection Manager (RDCMan) configuration files - MS won't fix
 cmd /c ftype rdgfile="%systemroot%\system32\notepad.exe" "%1"
+
+
+reg delete "HKCU:\Software\Classes\ms-appinstaller" /v "URL Protocol"
