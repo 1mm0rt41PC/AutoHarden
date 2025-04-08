@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2024-07-16-15-52-52
-$AutoHarden_version="2024-07-16-15-52-52"
+# Update: 2025-04-08-16-17-01
+$AutoHarden_version="2025-04-08-16-17-01"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1656,6 +1656,16 @@ Write-Progress -Activity AutoHarden -Status "Harden-RDP-Credentials" -PercentCom
 Write-Host -BackgroundColor Blue -ForegroundColor White "Running Harden-RDP-Credentials"
 Get-Item "HKCU:\Software\Microsoft\Terminal Server Client\Servers\*" -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse  -ErrorAction SilentlyContinue
 
+
+# From: https://blog.bitsadmin.com/spying-on-users-using-rdp-shadowing?s=09
+	# From: https://swarm.ptsecurity.com/remote-desktop-services-shadowing/
+# 0 – No remote control allowed;
+# 1 – Full Control with user’s permission;
+# 2 – Full Control without user’s permission;
+# 3 – View Session with user’s permission;
+# 4 – View Session without user’s permission.
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" /v Shadow /t REG_DWORD /d 0 /f
+
 Write-Progress -Activity AutoHarden -Status "Harden-RDP-Credentials" -Completed
 echo "####################################################################################################"
 echo "# Harden-VMWareWorkstation"
@@ -1837,6 +1847,47 @@ if( (New-Object System.Security.Principal.NTAccount('Guest')).Translate([System.
 
 }
 Write-Progress -Activity AutoHarden -Status "Hardening-AccountRename" -Completed
+echo "####################################################################################################"
+echo "# Hardening-AzureAD"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Hardening-AzureAD" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Hardening-AzureAD"
+# To fix the unpredictable freez of Office apps (Outlook/Teams/OneDrive): http://aldrid.ge/W10MU-AAD-Auth
+# https://techpress.net/how-to-unjoin-a-hybrid-azure-ad-join-device/
+# Deny Teams&co to autojoin device to AzureAD
+# If the computer in autoenrolled:
+# 1) Check:
+# dsregcmd.exe /debug /status
+# 2) Unenroll:
+# dsregcmd.exe /debug /leave (run it in SYSTEM via a scheduledtask)
+#
+# WARNING! do not disable DisableAADWAM or EnableADAL, it will kill the MFA on Azure, all account with WFA will not work anymore
+#
+# In AAD/Microsoft-Entra go to Identity > Devices > All devices > Device settings
+#	- "Users may join devices to Microsoft Entra ID": SELECTED (only dedicated user)
+#	- "Additional local administrators on Microsoft Entra joined devices": NONE
+#	- "Require multifactor authentication (MFA) to join devices": YES
+<#
+# Check logs:
+Get-WinEvent -LogName "Microsoft-Windows-AAD/Operational" | Where-Object { ($_.LevelDisplayName -eq "Error" -or $_.LevelDisplayName -eq "Warning") -and $_.TimeCreated -gt [DateTime]::Now.AddMinutes(-10)  }
+
+# Run this script in the session context of the user
+if( (Get-AppxPackage Microsoft.AAD.BrokerPlugin) -eq $null ){
+	Write-Host "Broker service missing - reinstalling" -ForegroundColor Yellow
+	Add-AppxPackage -Register "C:\Windows\SystemApps\Microsoft.AAD.BrokerPlugin_cw5n1h2txyewy\Appxmanifest.xml" -DisableDevelopmentMode -ForceApplicationShutdown
+}else{
+	Write-Host "Broker service found - exiting now" -ForegroundColor Green
+}
+
+# Remove all cache about AAD (This part require admin priv)
+Get-ItemProperty -Path "C:\Users\*\AppData\Local\Packages\Microsoft.AAD.BrokerPlugin*" | %{ rmdir /q /s "$($_.FullName)" } | Out-Null 
+#>
+
+# Avoid Office apps (Outlook/Teams/OneDrive/...) to autojoin device to AAD
+reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin /v BlockAADWorkplaceJoin /d 1 /t REG_DWORD /F
+reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin /v autoWorkplaceJoin /d 0 /t REG_DWORD /F
+
+Write-Progress -Activity AutoHarden -Status "Hardening-AzureAD" -Completed
 echo "####################################################################################################"
 echo "# Hardening-BlockAutoDiscover"
 echo "####################################################################################################"
@@ -2703,6 +2754,27 @@ reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Ad
 }
 Write-Progress -Activity AutoHarden -Status "Optimiz-ClasicExplorerConfig" -Completed
 echo "####################################################################################################"
+echo "# Optimiz-CleanupADActivities"
+echo "####################################################################################################"
+Write-Progress -Activity AutoHarden -Status "Optimiz-CleanupADActivities" -PercentComplete 0
+Write-Host -BackgroundColor Blue -ForegroundColor White "Running Optimiz-CleanupADActivities"
+Remove-Item -Force -Recurse C:\Users\*\AppData\Local\Microsoft\Windows\SchCache\*.sch
+Get-Item registry::HKEY_USERS\*\SOFTWARE\Microsoft\ADs\Providers\LDAP | Remove-Item -Force -Recurse
+Get-Item "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Office\*\*\File MRU" | %{ $mypath=$_.PSPath; $_.Property | ?{ $_ -ne "FOLDERID_Desktop" -and $_ -ne "FOLDERID_Documents" } | %{ Remove-ItemProperty -Path $mypath -Name $_} }
+Get-Item "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Office\*\*\Place MRU" | %{ $mypath=$_.PSPath; $_.Property | ?{ $_ -ne "FOLDERID_Desktop" -and $_ -ne "FOLDERID_Documents" } | %{ Remove-ItemProperty -Path $mypath -Name $_} }
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Office\*\*\User MRU"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Office\*\*\Security\Trusted Documents\TrustRecords"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Office\*\Word\Reading Locations"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Terminal Server Client\Default"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Terminal Server Client\Servers"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Paint\Recent File List"
+Remove-Item -Force -Recurse "registry::HKEY_USERS\*\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths"
+Remove-Item -Force -Recurse "registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Nla\Cache\Intranet"
+Remove-Item -Force -Recurse "registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Nla\Cache\IntranetForests"
+Remove-Item -Force -Recurse "registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\*"
+
+Write-Progress -Activity AutoHarden -Status "Optimiz-CleanupADActivities" -Completed
+echo "####################################################################################################"
 echo "# Optimiz-CleanUpWindowFolder-MergeUpdate"
 echo "####################################################################################################"
 Write-Progress -Activity AutoHarden -Status "Optimiz-CleanUpWindowFolder-MergeUpdate" -PercentComplete 0
@@ -3073,8 +3145,8 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUiRPDCV2SP2FsiKLWm5Gt9eZW
-# 03egggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU94cBYMflDe1TLkqB5/X0EN5f
+# lsegggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -3132,16 +3204,16 @@ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFFGT4mx3NJgleH/ZvS3yiTWSYBctMA0GCSqGSIb3DQEBAQUA
-# BIICAGHBQrJR+5BrMgec/fWZnefVTdUZojILVYVCAqJxQUueHodnLZpfb0p3DEsD
-# X7ZsJb5j18j5fVBmwpZSf1w8eWLr3RIhJzHOAlMcaOqMAaL07wRQPxWSannmes/k
-# wFCY1cHyOB3ZHpG0ns1cdxaiZPRxcgxsTMAOZJVcSB5K0XTISf3Ud76YCbVEU3pg
-# 71MjuHIKMue2K4k+hIXp5ipoLgqsqn6BAFWa3VhPSnQBC9VO+rf7MF3SBQWGDbN/
-# Z282IdPTAjn75LVaufnuUMOUa4MqiX6OddtE/3IiEc6Pl7oe/J+ASSVXRp61355M
-# TsjfWvMKvhUDvwSpZvfHPRY6c9YZiq53e7niO8y8zjgIJf+MYAhkDbGTFWPrW8Tb
-# 25BZ4aT1r6qL7LDy84bXYwaUDyaPYEFkvjV7/CpPZFdCtVzEs65hv4NX6vCnH/9B
-# 5D8cv1bvsbUrgk0tsfkSES7D2Gwx4AgBiiR24c1dsLIG55SDAsPQMXTA12wQeyID
-# /ySU3J2sx7/S5Ds96UgWjZJ/6Kitpol1oYlZy/tEvWtPz1j3ut6xDxY56NpaXpBu
-# KhTzEg3MxQVBf6aQek8HrQKTqImSIWavsm25hqzXFTQenxeMtZNGrFPtH6TvxcyD
-# AOADLfVecbZWsflN7mJU8hUyfQYRXyMGSY5jESiRrncKIkGZ
+# KoZIhvcNAQkEMRYEFJhGJ4zAXMiFm3bx87eurZjK9YlAMA0GCSqGSIb3DQEBAQUA
+# BIICAEUlbpaW94XRNjLkczOcnsVdRMGA/tn78Lsgne+90pjOEAGRQVaVeNwDNrpd
+# P1HZ2i/kJiCPPc5lyamvRw4EFKHn/sBEcBKp2dfidD7CeTgTr+js2Ab0XoFLdUu1
+# 5CEX62+SBhww3WMoN+SXNx+f1waj4OBRxr9mKVlKi7rbhWecXAtjWD5E68v+BbrR
+# CDceUlofw4ztJwqWpQfJlvSy3NgQOEJq4Dl5/sn1DXAD5h8li8iHNzXXju1ENn8e
+# Xfii43ze/QFJ5Xa424eaJJ5/uyQh/eWgq2U7HV9Hf0jZvbk7X2wkiO5FVNpKPrI5
+# fiGq/pK0pmOPbfgiLHjTUcOMOEN2j5NqqYnMIZAU9k5TzV5HVfBesQW102d1lpEa
+# Ctc6WtSBLVODsaHnm276Iox7XFVP21eSL19xiH355A8Lp9J650S5Va6FDA4AC77B
+# Q2xxt63IlYLCynZ4ql192XszzkaEjyei2bMOp9hq1zlH2x+w1vnVpN5uKYbYiSxy
+# DthOcq4qTGXc9NeE9jhKJ1be4JSmhtNwarhT4P2Jz94iObAsgHVFWX7bBAXTYksi
+# U6YrOnm+PrnCEIhOOsKA4929JhEJypVQ3SxcA3QsybtjtIalZNEWgRP6i6zTbBYr
+# 0wwNILid5BcrFGQJCVxMP8CkyStvm3ub8vVwgURFrgOjhLVW
 # SIG # End signature block
