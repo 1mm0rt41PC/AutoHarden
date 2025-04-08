@@ -82,7 +82,7 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 		toBuff 'echo "####################################################################################################"'
 		toBuff ('echo "# '+$_.Name.Replace('.ps1','')+'"')
 		toBuff 'echo "####################################################################################################"'
-		toBuff ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -PercentComplete 0')
+		toBuff ('try{ Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -PercentComplete 0 } catch{}')
 		toBuff ('Write-Host -BackgroundColor Blue -ForegroundColor White "Running '+$_.Name.Replace('.ps1','')+'"')
 		
 		$f = "{0}\src\{1}" -f $PSScriptRoot,$_.Name.Replace('.ps1','.ask')
@@ -100,7 +100,7 @@ Get-ChildItem -Directory ${PSScriptRoot}\WebDomain\* | foreach {
 		}else{
 			toBuff (cat $_.FullName | out-string)
 		}
-		toBuff ('Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -Completed')
+		toBuff ('try{ Write-Progress -Activity AutoHarden -Status "'+$_.Name.Replace('.ps1','')+'" -Completed }catch{}')
 	}
 	$data = $global:buff.Replace('&{AutoHarden_ScriptName}',$outps1).Replace('&{AutoHardenCert}',$AutoHardenCert).Replace('&{AutoHardenCertCA}', $AutoHardenCertCA).Replace('&{date}',$date).Replace('&{AutoHarden_Group}',$AutoHarden_Group)
 

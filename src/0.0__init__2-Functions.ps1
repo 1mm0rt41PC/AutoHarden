@@ -215,7 +215,6 @@ function mywget( $Uri, $OutFile=$null )
 		}else{
 			curl.exe $Uri --output $OutFile > $null
 		}
-
 	}
 	Get-NetFirewallRule -DisplayName '*AutoHarden*Powershell*' -ErrorAction SilentlyContinue | Enable-NetFirewallRule
 	return $ret;
