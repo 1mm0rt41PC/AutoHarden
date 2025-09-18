@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2025-09-18-16-29-51
-$AutoHarden_version="2025-09-18-16-29-51"
+# Update: 2025-09-18-16-41-10
+$AutoHarden_version="2025-09-18-16-41-10"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1583,8 +1583,8 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 @('8.0','12.0','13.0','14.0','15.0','16.0','17.0','18.0') | %{
 	$ver = $_
 	$apps | %{
-		Write-Host "[.] ========================================= $($app.PadLeft(15)):$($ver.PadRight(4)) ========================================="
 		$app = $_
+		Write-Host "[.] ========================================= $($app.PadLeft(15)):$($ver.PadRight(4)) ========================================="
 		@('Policies\','') | %{
 			$pol = $_
 			# OfficeMacros contains Macro registry keys.
@@ -1649,10 +1649,8 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			# Do not default save document to OneDrive/Sharepoint/...
 			# HKCU\SOFTWARE\Microsoft\Office\16.0\Word
-			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$apps"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\$apps"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
@@ -3163,8 +3161,8 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU+/w3W3ZrUMGkWxNUsAK9W6Yp
-# /0mgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUaE1PfTDZinrBAo8KT+kzitky
+# 1VKgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -3222,16 +3220,16 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFA0oM+DnF/H7msfMgTfIX3STw+mqMA0GCSqGSIb3DQEBAQUA
-# BIICAJGwggS8hU3/szRsvCAr7VMB/a9mdqQM0Kmeydngwpjff9ohupVw39JngNWa
-# 7VlN7ckimsXem3otBEvcvBvGdgzcopqRTsvI2w1jwpUdtPku0tuA7Om+2ar7NLpO
-# p9dpUx+1SlRaKggEWY3caf2cYPCKKpxe9GnekHwLrttos/FW5kZNvgmVWU2Dk/lT
-# z2w+uxRNpZmw4bF+EZXlXGSLdLLejKCkQ2K18N2JyOkBjfoMBzjortLPtda/3PA+
-# S3Ld00uLsP7Hofcgaa1VfCzXyIt4YGp9y0puka2DHI5IgcHXPEviD6ooCFhG0Uhm
-# iSkZkRL44l+81gcPM9bgo8LYx+y/9VP5eX1MxA7Mp+Wx7qjnlAmYkb3Y6AOpw4nk
-# TWFXkyqB2vTTgRraK6un/F8R6ttEVfQTlMeT7KkYhF460JM3jqcy9EP4wedCzj+N
-# KDTqjeeCaEqlY6UPyzMgdBGYiA1QqgrTfgw+dMS1qdxvHosG5UmXJ5IapGNn/W3l
-# LbtWD3Pdy3GODrVUskRsX8SiZcacgXEK4XPDI3pCt6HG4UFHmjaxnJ4K6IDEFMjc
-# 9jLDeCTAYd/niToai1oNxGfUH9UqRdSni8khqzuILTElr8hw4it7XiWNyETGkODg
-# JWWQShOQIxufSWyqyddfLoy01YWCCgljQfw7ri6QJ8X3k7Lr
+# KoZIhvcNAQkEMRYEFAmZ5KTb+Ny3lwqyxtlyMROdNL25MA0GCSqGSIb3DQEBAQUA
+# BIICAHfZ6r18FTgBvTUZfb7sC09PlQxXOnraC/Hql1U5uGgsvqNp5UMDcnXK2XeN
+# RT5I5Ah/Ot2opyR3nLxNSZjBTrA4uftWHcqA3kolM3oBF8vLmBBrxkfOSq2Pw7t6
+# jmm94cfb6GGpmR7aVI6W3NZoI1VbA+a4D9vDrrMFV66am3mGZgN6xQ+ksX8S4Fbt
+# mZrXAiaqpo5wQ5LgFsLAkYHhjdq18yAG/T7FNSOoxXzBrhjLFr+QNnSQRADyQttc
+# z1zO1yeE1IF0nsbv31UQPXh6W43DOQeanGtVt2U6U+AX3EafWhAlZi2oCULOxUT6
+# VjISw3+lgx+lhLVe7szp9/jzXWrbHOthdlyYZnryBqcnFutILYVI7TX2hZxf3DS9
+# PKOVKP1mr1lCw8sZR6RX2CQTKLxqZVzcl+2ElkGOEad8hT9rB5WGy0ASTQMVkeBG
+# uhb6L9sj6HXIFqJuwpt8xCVNl9uoajY+FM8iwlNGOfvJep4mrHDREcSyqxB8LuNH
+# p/DzCeTi8kFUWHdTDbEZLdSAAtdycWTXCaSZx1WJGz5T22xkRjXQXpWvlp62BJp3
+# MT+jN3DVI0MUiHFTSEsa/eg0nyu4Qlm/br+CrKtKupT/ao4KXFO9jGayV+dYHSG3
+# kNRreAUSp1md56wgXRRrD11kVgonSkvPvlSs9SBQXQzDv2F0
 # SIG # End signature block

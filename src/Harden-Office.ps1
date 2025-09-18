@@ -36,8 +36,8 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 @('8.0','12.0','13.0','14.0','15.0','16.0','17.0','18.0') | %{
 	$ver = $_
 	$apps | %{
-		Write-Host "[.] ========================================= $($app.PadLeft(15)):$($ver.PadRight(4)) ========================================="
 		$app = $_
+		Write-Host "[.] ========================================= $($app.PadLeft(15)):$($ver.PadRight(4)) ========================================="
 		@('Policies\','') | %{
 			$pol = $_
 			# OfficeMacros contains Macro registry keys.
@@ -102,10 +102,8 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			# Do not default save document to OneDrive/Sharepoint/...
 			# HKCU\SOFTWARE\Microsoft\Office\16.0\Word
-			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
-			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$apps"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\$apps"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
