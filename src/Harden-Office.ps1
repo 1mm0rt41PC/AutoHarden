@@ -106,6 +106,13 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptInReason /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptInReason /t REG_DWORD /d 0 /f
 		}
 	}
 } | Out-File -Encoding ASCII -Append $regFile

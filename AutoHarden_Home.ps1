@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2025-09-18-16-22-22
-$AutoHarden_version="2025-09-18-16-22-22"
+# Update: 2025-09-18-16-29-51
+$AutoHarden_version="2025-09-18-16-29-51"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1486,6 +1486,13 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptInReason /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerData /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptIn /t REG_DWORD /d 0 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common"  /v SendCustomerDataOptInReason /t REG_DWORD /d 0 /f
 		}
 	}
 } | Out-File -Encoding ASCII -Append $regFile
@@ -2919,8 +2926,8 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU2Y7b4BpLiyJsBKqVYqefLYU+
-# uSSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUBsEiCqadCgD7p0xLRnsei2rl
+# pU2gggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2978,16 +2985,16 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFHECg4HxzqnMSkkzp35Yq2tlALCIMA0GCSqGSIb3DQEBAQUA
-# BIICACVglpWz2v/aJNRb3MeOhj/YmLDAsK6fCHWPOip/JfRR9VFstNhrd8DmXAtn
-# Hgf0DvLKxQOWGrqH7w9RlIEgPxAwHR/znwl7OmmhtqIayLRkWzhSMCWZfzO0CZce
-# C0qRs9GOwZ5y7CIlHIb0ak/v7kmjOpbV2RdHmFYTwaFpveUgcZrvHg4Kr9g+sF0S
-# 5hci/n4Y09GalN8UebacxwstT1k1RPsbEZ9bukQzpb3+NnwcBPuMOlCX00RfxdFL
-# kFM8V8YmmKdk8AYMvmxGascv9gYskdirW8Zq46eGQjNO3irJVLZo5o00fxVdUWAQ
-# 9Am2mgqlZAgCUDANja5/zNHrADpo4/xzqHt0ISGs5HZbZDqoKynZQdV9xrFJeGhq
-# cCofeP9ax0ZQq3C2MGp0X36UnOTUc0fUf3NBkIgq3hl3TRGeyJQaqmkAL8IrgNpN
-# PmQ7aFo50Bd+IdTo52Blwzp5wp7yvp6AYkpiiXO0ARr14DmS5lfizWO6NushyL+O
-# XzyVs4jkwmEtauSCatOPGfL6th4XSui3FKjp2CjXBIJocfQhDzra6+GoAe4Uj0gp
-# lwQwq2xK7OPetSMRZc5MWTQlZ5lt3cam5dJzOpEeVPEcsSu1Y8RXvZRJWdLHWRj0
-# FNMuWEJJXpvqxid3Nnz1EFU3L5Rz7FIhvlCDokjZetrWd8TU
+# KoZIhvcNAQkEMRYEFLX6SVnh1sa2LfnEk+MYHuedp7ggMA0GCSqGSIb3DQEBAQUA
+# BIICAH8r/yMCXM2HD0Sresb76NbpzsaN5ATuQEu1GlvfVZjEqMZsww4JKd+qrsCo
+# aqivmenwc3OCXv5AhLei81VIVUlQTteCa9sZhoqFhQ6s2TN/OnJ0adZj0hQbiu9j
+# QFU7L8XXdpZXBIgEYDZc3eMXrufMqMxmm87riZTfHhtKxqS6ifNOgRMiFkSHo5h0
+# PhLfZBp+qiKGzg2PmSxCmP2KXJRzb0p3g/tOtURFf2Zsqf9+B6STBH5N+GIegjHB
+# vdFE2ms8M3xVlPR/Yy68KTpPHtrszlp185NeYj4A4jrQx+KABsSx+BWgImYOZRT6
+# 2+ZSKZQaAull+3yXO9ARP6iJQskW02jVxs5F3fgRojJTkiD7++tFQUomk47wk4iq
+# AIPEx4YIWbpfYkuYqiEld5/oN0zRNGbCFAtpraw3oDjRISf4bTg6J0ZF17X3ME/x
+# bYJO2fmqff8CECbJs18gi25Nk1M5Mcps8nMP63GQhwZYKXNs4yGb8wiGlfuA9qTV
+# ZuBcWSwtTNcGPUgjLmb5XhlQyep0yeYYSp76VsjRZOpktHHIXUSFx6HnaXwKmL+T
+# +fzB10j3bpySIh9vBxCa+/dhto7UnIX0m9pYNe8hHDSDalSkRiM6PeKYukLCIgqL
+# jTpeQg+3vTDvRqrsIeDP/ack515kPFSgW8U92zSE3CItUe+h
 # SIG # End signature block
