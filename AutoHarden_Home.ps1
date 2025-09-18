@@ -17,8 +17,8 @@
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Update: 2025-04-08-16-23-14
-$AutoHarden_version="2025-04-08-16-23-14"
+# Update: 2025-09-18-16-22-22
+$AutoHarden_version="2025-09-18-16-22-22"
 $global:AutoHarden_boradcastMsg=$true
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
@@ -1474,6 +1474,18 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$app\Options"             /v DontUpdateLinks /t REG_DWORD /d 1 /f
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$app\Options\WordMail"    /v DontUpdateLinks /t REG_DWORD /d 1 /f
+			
+			# HKCU\SOFTWARE\Microsoft\Office\16.0\Common\General
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v disableCloudCreate /t REG_DWORD /d 1 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v disableCloudCreate /t REG_DWORD /d 1 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			# Do not default save document to OneDrive/Sharepoint/...
+			# HKCU\SOFTWARE\Microsoft\Office\16.0\Word
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 		}
 	}
 } | Out-File -Encoding ASCII -Append $regFile
@@ -2907,8 +2919,8 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # SIG # Begin signature block
 # MIINoAYJKoZIhvcNAQcCoIINkTCCDY0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUF/DBeeyytN448iQYPKsXNm9D
-# 1TKgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU2Y7b4BpLiyJsBKqVYqefLYU+
+# uSSgggo9MIIFGTCCAwGgAwIBAgIQlPiyIshB45hFPPzNKE4fTjANBgkqhkiG9w0B
 # AQ0FADAYMRYwFAYDVQQDEw1BdXRvSGFyZGVuLUNBMB4XDTE5MTAyOTIxNTUxNVoX
 # DTM5MTIzMTIzNTk1OVowFTETMBEGA1UEAxMKQXV0b0hhcmRlbjCCAiIwDQYJKoZI
 # hvcNAQEBBQADggIPADCCAgoCggIBALrMv49xZXZjF92Xi3cWVFQrkIF+yYNdU3GS
@@ -2966,16 +2978,16 @@ try{ Write-Progress -Activity AutoHarden -Status "ZZZ-30.__END__" -Completed }ca
 # MBgxFjAUBgNVBAMTDUF1dG9IYXJkZW4tQ0ECEJT4siLIQeOYRTz8zShOH04wCQYF
 # Kw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkD
 # MQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJ
-# KoZIhvcNAQkEMRYEFG3ecpJT040E3BPvSz52dt1kOhDhMA0GCSqGSIb3DQEBAQUA
-# BIICAChFpdaDxoRh2kzegjILlU1JvPr9qxudmiEsvcXec5ipna7oi8V+zrYt1Sad
-# X4jUSQvDS2cqb/mmfjE+ki1EIcdgq+U7nBUip/0HmGrhv53HK4m88LecN6ox2p7N
-# 19v/McC6HNVEtGiCIWCuIcnUQ3qCeSMWO/etFgRe7Xagskx5C0klQP1U/G5OKxL0
-# nGfvjaL4vZSvtzG229vH5SjQ/2NF77Iu+kkFpN8AtOfAsPsS2pRFQScP95qbmEpN
-# jwYIx/KwtThqMm4vSxSdh5gKPOc5ljAb7zM5p2wDMDaMg5qTkHGenwg8xI9O+zIM
-# +yptb4+u8nKe17OQF1LQ0gmfcxqy4gyp0up5vNP7DHFtTzINHq6JbKKyiDb6mgit
-# TM0FU3AyEyrlMuz7na7EhGuDarQZlD8NtLH4clvPyUXofG4t7c6Rlth5hEV7XM0t
-# Tns+aywLmEL+rq8Yberxhu34pw4j6DH/aazJJFTALuC06ZkxahGahgrlp89yMLPn
-# uBCqfVabVAEkMrYc7mNikMRVZjewg2XgbCe+pABt4K6KuDoLt8Um8oNZ9hmzRfPE
-# Jotvg2tSRLkxtwNvbRDJOVQuStDREhEyRKueny9Bh/oQrokesGx/r9JGoxPmgYHH
-# Qm8RWtbKEC/tg1tqm/v3EoP2UUGGtCduY+O0jwuz72nUW5At
+# KoZIhvcNAQkEMRYEFHECg4HxzqnMSkkzp35Yq2tlALCIMA0GCSqGSIb3DQEBAQUA
+# BIICACVglpWz2v/aJNRb3MeOhj/YmLDAsK6fCHWPOip/JfRR9VFstNhrd8DmXAtn
+# Hgf0DvLKxQOWGrqH7w9RlIEgPxAwHR/znwl7OmmhtqIayLRkWzhSMCWZfzO0CZce
+# C0qRs9GOwZ5y7CIlHIb0ak/v7kmjOpbV2RdHmFYTwaFpveUgcZrvHg4Kr9g+sF0S
+# 5hci/n4Y09GalN8UebacxwstT1k1RPsbEZ9bukQzpb3+NnwcBPuMOlCX00RfxdFL
+# kFM8V8YmmKdk8AYMvmxGascv9gYskdirW8Zq46eGQjNO3irJVLZo5o00fxVdUWAQ
+# 9Am2mgqlZAgCUDANja5/zNHrADpo4/xzqHt0ISGs5HZbZDqoKynZQdV9xrFJeGhq
+# cCofeP9ax0ZQq3C2MGp0X36UnOTUc0fUf3NBkIgq3hl3TRGeyJQaqmkAL8IrgNpN
+# PmQ7aFo50Bd+IdTo52Blwzp5wp7yvp6AYkpiiXO0ARr14DmS5lfizWO6NushyL+O
+# XzyVs4jkwmEtauSCatOPGfL6th4XSui3FKjp2CjXBIJocfQhDzra6+GoAe4Uj0gp
+# lwQwq2xK7OPetSMRZc5MWTQlZ5lt3cam5dJzOpEeVPEcsSu1Y8RXvZRJWdLHWRj0
+# FNMuWEJJXpvqxid3Nnz1EFU3L5Rz7FIhvlCDokjZetrWd8TU
 # SIG # End signature block

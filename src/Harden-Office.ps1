@@ -94,6 +94,18 @@ $apps = @('Publisher','Word','Excel','PowerPoint','Outlook','Access','Lync','One
 
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$app\Options"             /v DontUpdateLinks /t REG_DWORD /d 1 /f
 			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\$app\Options\WordMail"    /v DontUpdateLinks /t REG_DWORD /d 1 /f
+			
+			# HKCU\SOFTWARE\Microsoft\Office\16.0\Common\General
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v disableCloudCreate /t REG_DWORD /d 1 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v disableCloudCreate /t REG_DWORD /d 1 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Common\General"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			# Do not default save document to OneDrive/Sharepoint/...
+			# HKCU\SOFTWARE\Microsoft\Office\16.0\Word
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKCU\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Word"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
+			reg_fast_hkcu add "HKLM\SOFTWARE\${pol}Microsoft\Office\$ver\Excel"  /v AutoSaveByDefaultUserChoice /t REG_DWORD /d 2 /f
 		}
 	}
 } | Out-File -Encoding ASCII -Append $regFile
